@@ -30,10 +30,14 @@ The published canvas is rebuilt from `canvas/` — the 2.5 MB seeded output is g
 | — | Visual direction | ✅ **dark** — `#0B0B0F` base, lime `#C6F24E` accent |
 | D-1 | Macro granularity | ✅ **per meal group** for v1 — foods listed without individual macros, matching the sheet |
 | D-2 | Measurements as dated history (vs single current set) | ⏳ open |
-| D-3 | Progress photos: fixed front/side/back slots vs freeform | ⏳ open |
-| D-4 | Rest days | 🟡 **proposed** — a Rest day toggle; rest days count as compliant. Needs confirming |
+| D-3 | Progress photos | ✅ **freeform** — any number per date, no fixed slots |
+| D-4 | Rest days | ✅ **toggle on the check-in**; rest days count as compliant |
 | — | Client side: phone-first, check-in as landing, single-scroll form | ✅ decided |
 | — | Client sees compliance %, measurements, photos — **not** form-check notes | ✅ decided |
+| — | Clients can back-date a check-in they missed | ✅ decided |
+
+**Design is locked.** Everything above is consolidated into [`DESIGN.md`](../../DESIGN.md) at the repo root, which is
+the binding spec for implementation. This folder is now history and rationale — DESIGN.md is what you build from.
 
 ## Designed so far
 

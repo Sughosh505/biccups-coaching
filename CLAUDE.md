@@ -5,8 +5,9 @@ A fitness coaching CRM for a single coach who runs consultation and personal-tra
 ## Reference docs
 - Build plan (per-phase script — follow this): `docs/claude-code-build-plan.md`
 - Full spec (reference for detail): `docs/coaching-app-spec.md`
+- **UI spec (binding — follow exactly): `DESIGN.md`**
 
-Read both before starting. The build plan is the source of truth for build order; the spec explains the "why" and the access rules.
+Read all three before starting. The build plan is the source of truth for build order; the spec explains the "why" and the access rules; DESIGN.md is the source of truth for how every screen looks.
 
 ## Stack
 - Next.js (App Router, TypeScript)
@@ -27,6 +28,7 @@ Read both before starting. The build plan is the source of truth for build order
 - Never expose the Supabase service role key to the client. Anything touching secrets goes in server components or route handlers.
 - Ask before installing new dependencies or changing the database schema.
 - Commit after each phase with a clear message.
+- **Build the UI exactly as specified in `DESIGN.md`.** Do not invent colours, type sizes, spacing, components or layouts. If a screen needs something DESIGN.md doesn't cover, stop and ask, then add it to DESIGN.md before building it.
 - The plan-view and daily-check-in screens are what clients actually look at — invest in clean, professional styling there.
 
 ## Git workflow
