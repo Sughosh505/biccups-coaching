@@ -1,67 +1,40 @@
 {
-  "pages": [
-    { "id": "page-1", "name": "Coach app" },
-    { "id": "page-2", "name": "Landing directions" }
-  ],
   "artboards": [
-    { "file": "Main.dc.html", "page": "page-1", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Coach dashboard — roster grid" },
-    { "file": "ClientOverview.dc.html", "page": "page-1", "x": 1560, "y": 0, "w": 1440, "h": 1180, "title": "Client detail — Overview" },
-    { "file": "ClientCheckins.dc.html", "page": "page-1", "x": 0, "y": 1320, "w": 1440, "h": 1020, "title": "Client detail — Check-ins" },
-    { "file": "ConsultationReview.dc.html", "page": "page-1", "x": 1560, "y": 1320, "w": 1440, "h": 1160, "title": "Consultation review" },
-
-    { "file": "LandingEvidence.dc.html", "page": "page-2", "x": 0, "y": 0, "w": 1440, "h": 1520, "title": "Direction A — Evidence" },
-    { "file": "LandingProtocol.dc.html", "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 1480, "title": "Direction B — Protocol" },
-    { "file": "LandingEditorial.dc.html", "page": "page-2", "x": 3120, "y": 0, "w": 1440, "h": 1580, "title": "Direction C — Editorial" }
+    { "file": "Home.dc.html", "x": 0, "y": 0, "w": 1440, "h": 980, "title": "Home — daily overview" },
+    { "file": "Main.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Clients — roster grid" },
+    { "file": "ClientOverview.dc.html", "x": 0, "y": 1220, "w": 1440, "h": 1180, "title": "Client detail — Overview" },
+    { "file": "ClientCheckins.dc.html", "x": 1560, "y": 1220, "w": 1440, "h": 1020, "title": "Client detail — Check-ins" },
+    { "file": "ConsultationReview.dc.html", "x": 0, "y": 2540, "w": 1440, "h": 1160, "title": "Consultation review" }
   ],
   "annotations": [
     {
-      "id": "note-dashboard",
-      "page": "page-1",
+      "id": "note-home",
       "x": 0,
-      "y": -150,
+      "y": -180,
+      "w": 600,
+      "text": "HOME — what you land on each morning.\nAnswers one question: what needs me today? Everything here is an action, not a statistic — which is why there is no \"total clients\" vanity tile.\nClicking any name drops you into that client's detail."
+    },
+    {
+      "id": "note-roster",
+      "x": 1560,
+      "y": -180,
       "w": 560,
-      "text": "Roster grid: every client on one screen, problems sorted to the top.\nThe three things the spreadsheet can't show — trend direction, compliance %, and staleness — are the three columns that earn their place here."
+      "text": "CLIENTS — the drill-down from Home.\nEveryone on one screen, problems sorted to the top. The three columns the spreadsheet can't give you: trend direction, compliance %, and staleness."
     },
     {
       "id": "note-checkins",
-      "page": "page-1",
-      "x": 0,
-      "y": 1150,
+      "x": 1560,
+      "y": 1060,
       "w": 620,
-      "text": "Week banding is deliberate — it mirrors the merged WEEK column in your sheet, but each band now carries its own averages.\nMissing days appear as inline rows rather than silent blanks."
+      "text": "Week banding mirrors the merged WEEK column in your sheet, but each band now carries its own averages.\nMissing days appear as inline rows rather than silent blanks."
     },
     {
       "id": "note-accent",
-      "page": "page-1",
-      "x": 1560,
-      "y": -150,
-      "w": 480,
-      "text": "Accent colour is a live control on each artboard (the chip above the frame) — lime, cyan, orange and violet are loaded. Nothing else in the palette changes."
-    },
-    {
-      "id": "note-evidence",
-      "page": "page-2",
       "x": 0,
-      "y": -200,
-      "w": 560,
-      "text": "A — EVIDENCE. Bets on proof. The hero is a real client's 16-week record, and the streak grid turns daily check-ins into the argument itself.\nStrongest claim, no photography needed. Risk: abstract, and no human face anywhere."
-    },
-    {
-      "id": "note-protocol",
-      "page": "page-2",
-      "x": 1560,
-      "y": -200,
-      "w": 560,
-      "text": "B — PROTOCOL. Bets on seriousness. Reads like an engineering spec: mono type, hairline rules, a sample check-in record shown raw.\nDeliberately anti-hype. Risk: cold, and it will not convert someone who wants warmth."
-    },
-    {
-      "id": "note-editorial",
-      "page": "page-2",
-      "x": 3120,
-      "y": -200,
-      "w": 560,
-      "text": "C — EDITORIAL. Bets on emotion. Serif display type, full-bleed portraiture, one big client quote.\nMost immediately likeable. Risk: it needs real photography you may not have, and it is the most conventional of the three."
+      "y": 2400,
+      "w": 520,
+      "text": "Accent colour is a live control on each artboard (the chip above the frame) — lime, cyan, orange and violet are loaded. Nothing else in the palette changes."
     }
   ],
-  "launch": { "view": "canvas", "page": "page-2" }
+  "launch": { "view": "canvas" }
 }

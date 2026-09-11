@@ -114,15 +114,23 @@ to the data being reviewed*.
 
 ---
 
-## Recommendation
+## Decided (12 Sep): both A and B, as two screens
 
-**Option B for the dashboard, and borrow Option C's split-pane for the check-in review screen** (Phase 3),
-where clearing a daily queue genuinely is the job.
+Not an either/or in the end. The two options turned out to be different screens rather than competing designs:
 
-Reasoning: he is migrating *from a spreadsheet*, where seeing everything at once is the baseline expectation.
-Option A would feel like losing control on day one. Option B keeps that overview and adds the three things the
-sheet can't do — trend direction, compliance %, and staleness warnings — while collapsing into Option A's
-shape naturally if the roster ever grows.
+- **`/coach` — Home.** Option A's shape. The morning landing screen, answering *what needs me today?*
+  Stat tiles, a needs-attention queue with actions, today's check-ins with key numbers inline, plus a
+  week-at-a-glance compliance grid, consultations inbox and low packages. Everything on it is an action,
+  which is why there's no "total clients" vanity tile.
+- **`/coach/clients` — Roster.** Option B's shape, reached from Home or the sidebar. Everyone on one screen
+  with trend sparkline, last check-in and compliance — the "I can see everything" view he has today in the sheet.
+
+Option C's split-pane is still the right pattern for the **check-in review** screen in Phase 3, where clearing
+a daily queue genuinely is the job.
+
+Reasoning for keeping both: he's migrating *from a spreadsheet*, where seeing everything at once is the baseline
+expectation — so the roster has to exist. But a spreadsheet's failure mode is that a quiet client's blank rows go
+unnoticed for weeks, and only a triage-shaped Home fixes that.
 
 ## Deferred to later phases
 

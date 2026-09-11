@@ -12,9 +12,11 @@ which becomes the binding reference for implementation. Until then, treat every 
 |---|---|
 | [01-research.md](01-research.md) | How TrueCoach / Trainerize / hi.fitness / CoachingPortal lay out the coach side, and what we take from them |
 | [02-spreadsheet-audit.md](02-spreadsheet-audit.md) | Field-by-field transcription of the current Google Sheet — the source of truth for what must exist |
-| [03-coach-dashboard.md](03-coach-dashboard.md) | Three layout options for the coach landing page |
-| [04-landing-page.md](04-landing-page.md) | Three directions for the public landing page |
+| [03-coach-dashboard.md](03-coach-dashboard.md) | Layout options for the coach's screens, and what was decided |
 | [canvas/](canvas/) | Source artboards for the design canvas (`.dc.html` + `canvas.json`) |
+
+**Scope note:** this app is the **coach-side dashboard plus client logins** only. Marketing/public-facing pages
+live in a separate app already being built — nothing here should drift into that.
 
 The published canvas is rebuilt from `canvas/` — the 2.5 MB seeded output is gitignored, not committed.
 
@@ -23,19 +25,16 @@ The published canvas is rebuilt from `canvas/` — the 2.5 MB seeded output is g
 | # | Decision | Status |
 |---|---|---|
 | — | Design all core screens before resuming phases | ✅ agreed |
-| — | Coach dashboard layout | ✅ **roster grid** |
+| — | Coach screens | ✅ **Home overview + Clients roster**, both |
 | — | Visual direction | ✅ **dark** — `#0B0B0F` base, lime `#C6F24E` accent |
-| — | Landing page direction (A / B / C) | ⏳ **deciding now** |
 | D-1 | Macro granularity: per-food vs per-meal-group | ⏳ open |
 | D-2 | Measurements as dated history (vs single current set) | ⏳ open |
 | D-3 | Progress photos: fixed front/side/back slots vs freeform | ⏳ open |
 | D-4 | Rest days: flag on check-in vs absent workout link | ⏳ open |
-| D-5 | Landing CTA target: payment app / booking / Google Form | ⏳ open |
 
 ## Designed so far
 
-- Coach dashboard (roster grid) · Client detail — Overview · Client detail — Check-ins · Consultation review
-- Landing page — three competing directions
+- Home (daily overview) · Clients (roster grid) · Client detail — Overview · Client detail — Check-ins · Consultation review
 
 ## Still to design
 
