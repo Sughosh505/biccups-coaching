@@ -87,9 +87,16 @@ for a plan the client may print or screenshot.
 Colour psychology for trainer brands: blue = trust/professionalism, orange = energy/motivation, black = strength.
 Standard advice is 2–3 brand colours, max.
 
-**Recommendation for us:** the coach spends long sessions reading dense tables at a desk → **light, neutral base with
-one accent**, and support dark as a theme later. The client-facing plan view especially should be light — it's the
-document he hands someone who paid for it. This isn't a consumer workout app competing on vibe; it's a working tool.
+**Recommendation at the time:** light neutral base with one accent, on the grounds that the coach reads dense tables
+for long stretches at a desk.
+
+**Decision taken (12 Sep): dark, overruling the above.** Base `#0B0B0F`, surfaces `#141419`, borders `#26262E`,
+single lime accent `#C6F24E` doubling as the positive/progress colour, with amber `#F5B342` and red `#FF6B6B`
+for warning and alert. Lime *is* the "good" colour, so there is no separate green competing with the accent.
+
+One caveat worth revisiting when we build the client-facing plan view (Phase 4): that screen is a document a paying
+client may want to print or screenshot, and a near-black page is expensive and awkward on paper. A light print
+stylesheet for that one view is probably the answer rather than a second theme.
 
 ---
 

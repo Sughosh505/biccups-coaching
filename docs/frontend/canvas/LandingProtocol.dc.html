@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; color: #EDEDF0; background: #0B0B0F; }
+    a { color: #C6F24E; text-decoration: none; } a:hover { color: #B5E23D; }
+    .lbl { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #6E6E7A; }
+    .rule { height: 1px; background: #1E1E25; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1480px; background: #0B0B0F; overflow: hidden;">
+
+  <!-- Nav -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 56px; border-bottom: 1px solid #1E1E25;">
+    <span style="font-size: 12.5px; letter-spacing: 0.14em; text-transform: uppercase;">Biccups <span style="color: #6E6E7A;">/ coaching protocol</span></span>
+    <div style="display: flex; align-items: center; gap: 28px;">
+      <span class="lbl">01 Method</span>
+      <span class="lbl">02 Record</span>
+      <span class="lbl">03 Terms</span>
+      <span style="font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #0B0B0F; background: {{accent}}; padding: 8px 16px;">Book consult</span>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-bottom: 1px solid #1E1E25;">
+
+    <div style="padding: 64px 48px 64px 56px; border-right: 1px solid #1E1E25;">
+      <span class="lbl">Protocol 001 · intake open</span>
+      <h1 style="margin: 26px 0 0 0; font-size: 40px; line-height: 1.24; font-weight: 500; letter-spacing: -0.02em; max-width: 560px;">
+        A coaching system that runs on <span style="color: {{accent}};">daily data</span>, not motivation.
+      </h1>
+      <p style="margin: 28px 0 0 0; font-size: 14px; line-height: 1.8; color: #9A9AA5; max-width: 500px;">
+        You log five minutes every morning. I read every entry, adjust the plan when the
+        numbers say to, and tell you exactly why. No app streaks, no group chats, no
+        motivational posting. Just a record and someone accountable for reading it.
+      </p>
+      <div style="display: flex; align-items: center; gap: 16px; margin-top: 38px;">
+        <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: #0B0B0F; background: {{accent}}; padding: 14px 26px;">Book a consultation</span>
+        <span style="font-size: 13px; color: #6E6E7A;">→ 6 client slots open</span>
+      </div>
+    </div>
+
+    <div style="padding: 64px 56px 64px 48px; display: flex; flex-direction: column; gap: 0;">
+      <sc-for list="{{spec}}" as="s" hint-placeholder-count="6">
+        <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 20px; padding: 15px 0; border-bottom: 1px solid #1E1E25;">
+          <span class="lbl">{{s.k}}</span>
+          <span style="font-size: 13.5px; color: #C4C4CE; line-height: 1.55;">{{s.v}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Numbered sections -->
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-bottom: 1px solid #1E1E25;">
+    <sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+      <div style="padding: 46px 40px 50px 40px; border-right: 1px solid #1E1E25;">
+        <span style="font-size: 13px; font-weight: 600; color: {{accent}};">{{st.n}}</span>
+        <h3 style="margin: 20px 0 0 0; font-size: 19px; font-weight: 500; letter-spacing: -0.01em;">{{st.title}}</h3>
+        <p style="margin: 14px 0 0 0; font-size: 13.5px; line-height: 1.75; color: #9A9AA5;">{{st.body}}</p>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- Sample record -->
+  <div style="display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 0;">
+
+    <div style="padding: 58px 48px 58px 56px; border-right: 1px solid #1E1E25;">
+      <span class="lbl">02 · The record</span>
+      <h2 style="margin: 22px 0 0 0; font-size: 27px; line-height: 1.32; font-weight: 500; letter-spacing: -0.018em;">
+        This is what one morning looks like on my side of it.
+      </h2>
+      <p style="margin: 20px 0 0 0; font-size: 13.5px; line-height: 1.8; color: #9A9AA5;">
+        Nothing here is scraped from a wearable or guessed at. You enter it, I read it,
+        and it stays on your record for as long as we work together.
+      </p>
+    </div>
+
+    <div style="padding: 58px 56px 58px 48px;">
+      <div style="border: 1px solid #1E1E25; background: #101015;">
+        <div style="display: flex; align-items: center; gap: 9px; padding: 12px 18px; border-bottom: 1px solid #1E1E25;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}};"></span>
+          <span style="font-size: 12px; color: #8B8B96;">checkin — vivaan.m — 2026-09-11</span>
+        </div>
+        <div style="padding: 18px 18px 20px 18px; display: flex; flex-direction: column; gap: 9px;">
+          <sc-for list="{{record}}" as="r" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 16px;">
+              <span style="font-size: 13px; color: #6E6E7A;">{{r.k}}</span>
+              <span style="font-size: 13px; color: {{r.color}};">{{r.v}}</span>
+            </div>
+          </sc-for>
+          <div class="rule" style="margin: 8px 0;"></div>
+          <span style="font-size: 13px; color: {{accent}};">&gt; reviewed · plan unchanged · 07:14</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#C6F24E","options":["#C6F24E","#3DD6F5","#FF7A3C","#A78BFA"],"section":"Theme"},"$preview":{"width":1440,"height":1480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#C6F24E',
+      spec: [
+        { k: 'Duration', v: 'Minimum 12 weeks. Most run 16 to 24.' },
+        { k: 'Cadence', v: 'Daily check-in, weekly plan review, monthly measurements.' },
+        { k: 'You provide', v: 'Weight, steps, calories, sleep, hunger, digestion, stress. One photo of the day’s food.' },
+        { k: 'You receive', v: 'A written diet and supplement plan, a training split, and form checks on video.' },
+        { k: 'Contact', v: 'Direct. You are not messaging an assistant.' },
+        { k: 'Starts with', v: 'A paid consultation call. No obligation to continue after it.' }
+      ],
+      steps: [
+        {
+          n: '01',
+          title: 'Consultation',
+          body: 'You fill an intake form and we talk for an hour. I need your history, your injuries, your actual schedule, and what you have already tried and abandoned.'
+        },
+        {
+          n: '02',
+          title: 'The plan',
+          body: 'I write the diet, supplements and training split around your week — not a template with your name on it. You get it in writing, with the reasoning attached.'
+        },
+        {
+          n: '03',
+          title: 'The loop',
+          body: 'You log every morning. I read every entry. When the trend says the plan is wrong, the plan changes — usually within the same week, not at some monthly review.'
+        }
+      ],
+      record: [
+        { k: 'weight', v: '78.85 kg', color: '#C4C4CE' },
+        { k: 'steps', v: '9,027', color: '#C4C4CE' },
+        { k: 'calories', v: '— not tracked', color: '#F5B342' },
+        { k: 'sleep', v: '8.0 h    quality 7/10', color: '#C4C4CE' },
+        { k: 'water', v: '4.0 L', color: '#C4C4CE' },
+        { k: 'hunger', v: '6/10', color: '#C4C4CE' },
+        { k: 'stress', v: '5/10', color: '#C4C4CE' },
+        { k: 'digestion', v: 'none reported', color: '#C4C4CE' },
+        { k: 'training', v: 'lyfta.app/wk/mxdtg', color: '#C4C4CE' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

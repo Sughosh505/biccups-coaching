@@ -9,47 +9,47 @@
 <helmet>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
   <style>
-    body { margin: 0; font-family: Geist, system-ui, -apple-system, sans-serif; color: #171717; }
-    a { color: #1d4ed8; text-decoration: none; } a:hover { color: #1e40af; }
+    body { margin: 0; font-family: Geist, system-ui, -apple-system, sans-serif; color: #EDEDF0; background: #0B0B0F; }
+    a { color: #C6F24E; text-decoration: none; } a:hover { color: #B5E23D; }
     .mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
-    .lbl { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; color: #a3a3a3; text-transform: uppercase; }
+    .lbl { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; color: #6E6E7A; text-transform: uppercase; }
   </style>
 </helmet>
 
-<div style="width: 1440px; height: 1180px; background: #fafafa; overflow: hidden; display: flex; flex-direction: column;">
+<div style="width: 1440px; height: 1180px; background: #0B0B0F; overflow: hidden; display: flex; flex-direction: column;">
 
   <!-- Client header -->
-  <div style="background: #ffffff; border-bottom: 1px solid #e5e5e5; padding: 18px 32px 0 32px;">
+  <div style="background: #141419; border-bottom: 1px solid #26262E; padding: 18px 32px 0 32px;">
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      <span style="font-size: 12.5px; color: #737373;">Clients</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6E6E7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <span style="font-size: 12.5px; color: #8B8B96;">Clients</span>
     </div>
 
     <div style="display: flex; align-items: flex-start; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 14px;">
-        <div class="mono" style="width: 46px; height: 46px; border-radius: 50%; background: #f5f5f5; color: #525252; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500;">VM</div>
+        <div class="mono" style="width: 46px; height: 46px; border-radius: 50%; background: #1E1E25; color: #A8A8B4; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500;">VM</div>
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <div style="display: flex; align-items: center; gap: 9px;">
             <h1 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em;">Vivaan Menon</h1>
-            <span style="font-size: 11px; font-weight: 500; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 2px 9px;">Active</span>
+            <span style="font-size: 11px; font-weight: 500; color: #C6F24E; background: rgba(198,242,78,0.10); border: 1px solid rgba(198,242,78,0.28); border-radius: 20px; padding: 2px 9px;">Active</span>
           </div>
-          <span style="font-size: 12.5px; color: #737373;">Started 27 Aug 2026 · 16 days · ULRULUR split</span>
+          <span style="font-size: 12.5px; color: #8B8B96;">Started 27 Aug 2026 · 16 days · ULRULUR split</span>
         </div>
       </div>
 
       <div style="display: flex; align-items: center; gap: 9px;">
-        <span style="font-size: 13px; font-weight: 500; color: #404040; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 14px;">Edit client</span>
-        <span style="font-size: 13px; font-weight: 500; color: #ffffff; background: {{accent}}; border-radius: 8px; padding: 8px 14px;">Open plan</span>
+        <span style="font-size: 13px; font-weight: 500; color: #C4C4CE; background: #141419; border: 1px solid #26262E; border-radius: 8px; padding: 8px 14px;">Edit client</span>
+        <span style="font-size: 13px; font-weight: 500; color: #0B0B0F; background: {{accent}}; border-radius: 8px; padding: 8px 14px;">Open plan</span>
       </div>
     </div>
 
     <!-- Tabs -->
     <div style="display: flex; align-items: center; gap: 26px; margin-top: 18px;">
       <span style="font-size: 13.5px; font-weight: 500; color: {{accent}}; padding-bottom: 11px; border-bottom: 2px solid {{accent}};">Overview</span>
-      <span style="font-size: 13.5px; color: #737373; padding-bottom: 11px; border-bottom: 2px solid transparent;">Check-ins</span>
-      <span style="font-size: 13.5px; color: #737373; padding-bottom: 11px; border-bottom: 2px solid transparent;">Diet &amp; supplements</span>
-      <span style="font-size: 13.5px; color: #737373; padding-bottom: 11px; border-bottom: 2px solid transparent;">Workouts</span>
-      <span style="font-size: 13.5px; color: #737373; padding-bottom: 11px; border-bottom: 2px solid transparent;">Progress</span>
+      <span style="font-size: 13.5px; color: #8B8B96; padding-bottom: 11px; border-bottom: 2px solid transparent;">Check-ins</span>
+      <span style="font-size: 13.5px; color: #8B8B96; padding-bottom: 11px; border-bottom: 2px solid transparent;">Diet &amp; supplements</span>
+      <span style="font-size: 13.5px; color: #8B8B96; padding-bottom: 11px; border-bottom: 2px solid transparent;">Workouts</span>
+      <span style="font-size: 13.5px; color: #8B8B96; padding-bottom: 11px; border-bottom: 2px solid transparent;">Progress</span>
     </div>
   </div>
 
@@ -59,113 +59,113 @@
     <!-- Stat row -->
     <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;">
 
-      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
+      <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
         <span class="lbl">Current weight</span>
         <div style="display: flex; align-items: baseline; gap: 6px;">
           <span class="mono" style="font-size: 25px; font-weight: 500; letter-spacing: -0.02em;">78.85</span>
-          <span style="font-size: 13px; color: #a3a3a3;">kg</span>
+          <span style="font-size: 13px; color: #6E6E7A;">kg</span>
         </div>
-        <span class="mono" style="font-size: 11.5px; color: #15803d;">▼ 1.15 since start</span>
+        <span class="mono" style="font-size: 11.5px; color: #C6F24E;">▼ 1.15 since start</span>
       </div>
 
-      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
+      <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
         <span class="lbl">To goal</span>
         <div style="display: flex; align-items: baseline; gap: 6px;">
           <span class="mono" style="font-size: 25px; font-weight: 500; letter-spacing: -0.02em;">3.85</span>
-          <span style="font-size: 13px; color: #a3a3a3;">kg left</span>
+          <span style="font-size: 13px; color: #6E6E7A;">kg left</span>
         </div>
         <div style="display: flex; align-items: center; gap: 9px;">
-          <div style="flex-grow: 1; height: 4px; border-radius: 3px; background: #f0f0f0; overflow: hidden;">
+          <div style="flex-grow: 1; height: 4px; border-radius: 3px; background: #212128; overflow: hidden;">
             <div style="width: 23%; height: 4px; border-radius: 3px; background: {{accent}};"></div>
           </div>
-          <span class="mono" style="font-size: 11px; color: #a3a3a3;">23%</span>
+          <span class="mono" style="font-size: 11px; color: #6E6E7A;">23%</span>
         </div>
       </div>
 
-      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
+      <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
         <span class="lbl">Check-in compliance</span>
         <div style="display: flex; align-items: baseline; gap: 6px;">
           <span class="mono" style="font-size: 25px; font-weight: 500; letter-spacing: -0.02em;">94</span>
-          <span style="font-size: 13px; color: #a3a3a3;">%</span>
+          <span style="font-size: 13px; color: #6E6E7A;">%</span>
         </div>
-        <span class="mono" style="font-size: 11.5px; color: #737373;">16 of 17 days</span>
+        <span class="mono" style="font-size: 11.5px; color: #8B8B96;">16 of 17 days</span>
       </div>
 
-      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
+      <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 7px;">
         <span class="lbl">Avg sleep · 7 days</span>
         <div style="display: flex; align-items: baseline; gap: 6px;">
           <span class="mono" style="font-size: 25px; font-weight: 500; letter-spacing: -0.02em;">7.6</span>
-          <span style="font-size: 13px; color: #a3a3a3;">hrs</span>
+          <span style="font-size: 13px; color: #6E6E7A;">hrs</span>
         </div>
-        <span class="mono" style="font-size: 11.5px; color: #737373;">quality 7.8 / 10</span>
+        <span class="mono" style="font-size: 11.5px; color: #8B8B96;">quality 7.8 / 10</span>
       </div>
     </div>
 
     <!-- Weight chart -->
-    <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 17px 20px 14px 20px;">
+    <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; padding: 17px 20px 14px 20px;">
       <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
         <div style="display: flex; flex-direction: column; gap: 3px;">
           <span style="font-size: 13.5px; font-weight: 600;">The cut</span>
-          <span style="font-size: 12px; color: #a3a3a3;">Daily weight from check-ins · 27 Aug – 11 Sep</span>
+          <span style="font-size: 12px; color: #6E6E7A;">Daily weight from check-ins · 27 Aug – 11 Sep</span>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="width: 14px; height: 2px; background: {{accent}}; border-radius: 2px;"></span>
-            <span style="font-size: 11.5px; color: #737373;">Weight</span>
+            <span style="font-size: 11.5px; color: #8B8B96;">Weight</span>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="width: 14px; height: 0; border-top: 1.5px dashed #a3a3a3;"></span>
-            <span style="font-size: 11.5px; color: #737373;">Goal 75.0 kg</span>
+            <span style="width: 14px; height: 0; border-top: 1.5px dashed #6E6E7A;"></span>
+            <span style="font-size: 11.5px; color: #8B8B96;">Goal 75.0 kg</span>
           </div>
         </div>
       </div>
 
       <svg width="1084" height="192" viewBox="0 0 1084 192" fill="none">
-        <line x1="44" y1="15" x2="1084" y2="15" stroke="#f0f0f0" stroke-width="1"/>
-        <line x1="44" y1="75" x2="1084" y2="75" stroke="#f0f0f0" stroke-width="1"/>
-        <line x1="44" y1="135" x2="1084" y2="135" stroke="#f0f0f0" stroke-width="1"/>
-        <text x="30" y="19" text-anchor="end" font-family="Geist Mono, monospace" font-size="10.5" fill="#a3a3a3">80</text>
-        <text x="30" y="79" text-anchor="end" font-family="Geist Mono, monospace" font-size="10.5" fill="#a3a3a3">78</text>
-        <text x="30" y="139" text-anchor="end" font-family="Geist Mono, monospace" font-size="10.5" fill="#a3a3a3">76</text>
+        <line x1="44" y1="15" x2="1084" y2="15" stroke="#212128" stroke-width="1"/>
+        <line x1="44" y1="75" x2="1084" y2="75" stroke="#212128" stroke-width="1"/>
+        <line x1="44" y1="135" x2="1084" y2="135" stroke="#212128" stroke-width="1"/>
+        <text x="30" y="19" text-anchor="end" font-family="Geist Mono, monospace" font-size="10.5" fill="#6E6E7A">80</text>
+        <text x="30" y="79" text-anchor="end" font-family="Geist Mono, monospace" font-size="10.5" fill="#6E6E7A">78</text>
+        <text x="30" y="139" text-anchor="end" font-family="Geist Mono, monospace" font-size="10.5" fill="#6E6E7A">76</text>
 
-        <path d="M44,30 L109,42 L174,60 L239,60 L304,60 L369,67.5 L434,69 L499,75 L564,75 L629,76.5 L694,33 L759,33 L824,45 L889,45 L954,49.5 L1019,49.5 L1019,180 L44,180 Z" fill="{{accent}}" fill-opacity="0.06"/>
+        <path d="M44,30 L109,42 L174,60 L239,60 L304,60 L369,67.5 L434,69 L499,75 L564,75 L629,76.5 L694,33 L759,33 L824,45 L889,45 L954,49.5 L1019,49.5 L1019,180 L44,180 Z" fill="{{accent}}" fill-opacity="0.14"/>
         <polyline points="44,30 109,42 174,60 239,60 304,60 369,67.5 434,69 499,75 564,75 629,76.5 694,33 759,33 824,45 889,45 954,49.5 1019,49.5" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 
-        <line x1="44" y1="165" x2="1084" y2="165" stroke="#a3a3a3" stroke-width="1.5" stroke-dasharray="5 4"/>
-        <circle cx="1019" cy="49.5" r="4" fill="{{accent}}" stroke="#ffffff" stroke-width="2"/>
+        <line x1="44" y1="165" x2="1084" y2="165" stroke="#7A7A88" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <circle cx="1019" cy="49.5" r="4" fill="{{accent}}" stroke="#141419" stroke-width="2"/>
 
-        <text x="44" y="191" font-family="Geist Mono, monospace" font-size="10" fill="#a3a3a3">27 Aug</text>
-        <text x="499" y="191" font-family="Geist Mono, monospace" font-size="10" fill="#a3a3a3">3 Sep</text>
-        <text x="990" y="191" font-family="Geist Mono, monospace" font-size="10" fill="#a3a3a3">11 Sep</text>
+        <text x="44" y="191" font-family="Geist Mono, monospace" font-size="10" fill="#6E6E7A">27 Aug</text>
+        <text x="499" y="191" font-family="Geist Mono, monospace" font-size="10" fill="#6E6E7A">3 Sep</text>
+        <text x="990" y="191" font-family="Geist Mono, monospace" font-size="10" fill="#6E6E7A">11 Sep</text>
       </svg>
     </div>
 
     <!-- Details + measurements -->
     <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
 
-      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;">
-        <div style="padding: 12px 17px; border-bottom: 1px solid #f0f0f0;">
+      <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; overflow: hidden;">
+        <div style="padding: 12px 17px; border-bottom: 1px solid #212128;">
           <span style="font-size: 13px; font-weight: 600;">Details</span>
         </div>
         <div style="padding: 6px 17px 12px 17px;">
           <sc-for list="{{details}}" as="d" hint-placeholder-count="8">
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fafafa;">
-              <span style="font-size: 12.5px; color: #737373;">{{d.k}}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1E1E25;">
+              <span style="font-size: 12.5px; color: #8B8B96;">{{d.k}}</span>
               <span class="mono" style="font-size: 12.5px; font-weight: 500;">{{d.v}}</span>
             </div>
           </sc-for>
         </div>
       </div>
 
-      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;">
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 17px; border-bottom: 1px solid #f0f0f0;">
+      <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 17px; border-bottom: 1px solid #212128;">
           <span style="font-size: 13px; font-weight: 600;">Measurements</span>
-          <span style="font-size: 11.5px; color: #a3a3a3;">Updated 29 Aug · cm</span>
+          <span style="font-size: 11.5px; color: #6E6E7A;">Updated 29 Aug · cm</span>
         </div>
         <div style="padding: 6px 17px 12px 17px;">
           <sc-for list="{{measures}}" as="m" hint-placeholder-count="8">
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fafafa;">
-              <span style="font-size: 12.5px; color: #737373;">{{m.k}}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1E1E25;">
+              <span style="font-size: 12.5px; color: #8B8B96;">{{m.k}}</span>
               <div style="display: flex; align-items: baseline; gap: 9px;">
                 <span class="mono" style="font-size: 12.5px; font-weight: 500;">{{m.v}}</span>
                 <span class="mono" style="font-size: 11px; color: {{m.dColor}}; width: 34px; text-align: right;">{{m.d}}</span>
@@ -177,14 +177,14 @@
     </div>
 
     <!-- Form check -->
-    <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;">
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 17px; border-bottom: 1px solid #f0f0f0;">
+    <div style="background: #141419; border: 1px solid #26262E; border-radius: 10px; overflow: hidden;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 17px; border-bottom: 1px solid #212128;">
         <span style="font-size: 13px; font-weight: 600;">Form checks</span>
         <span style="font-size: 12px; color: {{accent}};">Add form check</span>
       </div>
       <div style="display: flex; align-items: flex-start; gap: 16px; padding: 13px 17px;">
-        <span class="mono" style="font-size: 12px; color: #a3a3a3; width: 62px; flex-shrink: 0; padding-top: 1px;">9 Sep</span>
-        <span style="font-size: 13px; color: #404040; line-height: 1.55; flex-grow: 1;">Cut till 75. Gauge failure properly — right shoulder, chest ROM.</span>
+        <span class="mono" style="font-size: 12px; color: #6E6E7A; width: 62px; flex-shrink: 0; padding-top: 1px;">9 Sep</span>
+        <span style="font-size: 13px; color: #C4C4CE; line-height: 1.55; flex-grow: 1;">Cut till 75. Gauge failure properly — right shoulder, chest ROM.</span>
         <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: {{accent}}; flex-shrink: 0;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
           Video
@@ -196,12 +196,12 @@
 </div>
 </x-dc>
 
-<script data-dc-script data-props='{"accent":{"editor":"color","default":"#1d4ed8","options":["#1d4ed8","#0f766e","#c2410c","#4338ca"],"section":"Theme"},"$preview":{"width":1440,"height":1180}}'>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#C6F24E","options":["#C6F24E","#3DD6F5","#FF7A3C","#A78BFA"],"section":"Theme"},"$preview":{"width":1440,"height":1180}}'>
 class Component extends DCLogic {
   renderVals() {
-    const green = '#15803d', grey = '#a3a3a3';
+    const green = '#C6F24E', grey = '#6E6E7A';
     return {
-      accent: this.props.accent ?? '#1d4ed8',
+      accent: this.props.accent ?? '#C6F24E',
       details: [
         { k: 'Age', v: '22' },
         { k: 'Height', v: '183 cm' },
