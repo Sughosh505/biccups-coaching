@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, system-ui, -apple-system, sans-serif; color: #EDEDF0; background: #0B0B0F; }
+    a { color: #C6F24E; text-decoration: none; } a:hover { color: #B5E23D; }
+    .mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+    .sec { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6E6E7A; }
+    .card { background: #141419; border: 1px solid #26262E; border-radius: 13px; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 1880px; background: #0B0B0F; overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- Header -->
+  <div style="padding: 26px 20px 0 20px; display: flex; flex-direction: column; gap: 6px;">
+    <h1 style="margin: 0; font-size: 25px; font-weight: 600; letter-spacing: -0.025em;">Your plan</h1>
+    <span style="font-size: 13.5px; color: #8B8B96;">Cut phase · updated 10 Sep by Sughosh</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 24px; padding: 22px 20px 0 20px;">
+
+    <!-- Daily target -->
+    <div class="card" style="padding: 18px 16px; display: flex; flex-direction: column; gap: 16px;">
+      <span class="sec">Daily target</span>
+
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="mono" style="font-size: 38px; font-weight: 500; letter-spacing: -0.03em;">2,542</span>
+        <span style="font-size: 15px; color: #6E6E7A;">kcal</span>
+      </div>
+
+      <div style="display: flex; height: 8px; border-radius: 5px; overflow: hidden; gap: 2px;">
+        <div style="width: 23.3%; background: {{accent}};"></div>
+        <div style="width: 62.8%; background: #3DD6F5;"></div>
+        <div style="width: 13.8%; background: #F5B342;"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 7px; height: 7px; border-radius: 2px; background: {{accent}};"></span>
+            <span style="font-size: 12px; color: #8B8B96;">Protein</span>
+          </div>
+          <span class="mono" style="font-size: 17px; font-weight: 500;">148<span style="font-size: 12px; color: #6E6E7A;">g</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 7px; height: 7px; border-radius: 2px; background: #3DD6F5;"></span>
+            <span style="font-size: 12px; color: #8B8B96;">Carbs</span>
+          </div>
+          <span class="mono" style="font-size: 17px; font-weight: 500;">398<span style="font-size: 12px; color: #6E6E7A;">g</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 7px; height: 7px; border-radius: 2px; background: #F5B342;"></span>
+            <span style="font-size: 12px; color: #8B8B96;">Fat</span>
+          </div>
+          <span class="mono" style="font-size: 17px; font-weight: 500;">39<span style="font-size: 12px; color: #6E6E7A;">g</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meals -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="sec">Meals</span>
+
+      <sc-for list="{{meals}}" as="m" hint-placeholder-count="4">
+        <div class="card" style="overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: #17171D; border-bottom: 1px solid #212128;">
+            <span style="font-size: 14px; font-weight: 600;">{{m.name}}</span>
+            <div style="display: flex; align-items: baseline; gap: 5px;">
+              <span class="mono" style="font-size: 15px; font-weight: 500; color: {{accent}};">{{m.kcal}}</span>
+              <span style="font-size: 11.5px; color: #6E6E7A;">kcal</span>
+            </div>
+          </div>
+
+          <div style="padding: 6px 16px 10px 16px;">
+            <sc-for list="{{m.foods}}" as="f" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #1C1C22;">
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: #3A3A44; flex-shrink: 0;"></span>
+                <span style="font-size: 14px; color: #C4C4CE;">{{f}}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 18px; padding: 11px 16px; background: #101015;">
+            <span class="mono" style="font-size: 12px; color: #8B8B96;">P <span style="color: #C4C4CE;">{{m.p}}</span></span>
+            <span class="mono" style="font-size: 12px; color: #8B8B96;">C <span style="color: #C4C4CE;">{{m.c}}</span></span>
+            <span class="mono" style="font-size: 12px; color: #8B8B96;">F <span style="color: #C4C4CE;">{{m.f}}</span></span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- Supplements -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="sec">Supplements</span>
+
+      <sc-for list="{{supps}}" as="g" hint-placeholder-count="3">
+        <div class="card" style="overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-bottom: 1px solid #212128;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span style="font-size: 13.5px; font-weight: 500;">{{g.when}}</span>
+          </div>
+          <div style="padding: 4px 16px 10px 16px;">
+            <sc-for list="{{g.items}}" as="s" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1C1C22;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 14px; color: #EDEDF0;">{{s.name}}</span>
+                  <span style="font-size: 11.5px; color: #6E6E7A;">{{s.brand}}</span>
+                </div>
+                <span class="mono" style="font-size: 13px; color: #C4C4CE;">{{s.dose}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- Training -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="sec">Training split</span>
+
+      <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <sc-for list="{{split}}" as="d" hint-placeholder-count="7">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <div style="width: 38px; height: 44px; border-radius: 10px; background: {{d.bg}}; border: 1px solid {{d.border}}; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 14px; font-weight: 600; color: {{d.color}};">{{d.letter}}</span>
+              </div>
+              <span class="mono" style="font-size: 10.5px; color: #6E6E7A;">{{d.day}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; padding-top: 2px;">
+          <span style="font-size: 12px; color: #8B8B96;"><span style="color: {{accent}}; font-weight: 600;">U</span> Upper</span>
+          <span style="font-size: 12px; color: #8B8B96;"><span style="color: #3DD6F5; font-weight: 600;">L</span> Lower</span>
+          <span style="font-size: 12px; color: #8B8B96;"><span style="color: #6E6E7A; font-weight: 600;">R</span> Rest</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="sec">Notes from Sughosh</span>
+      <div class="card" style="padding: 16px;">
+        <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #C4C4CE;">
+          Cut runs until 75 kg, then we reassess. Keep steps above 8,000 on rest days —
+          that is doing more work than you think. Log the food photo even on the days
+          you go off plan; I would rather see it than guess.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom tabs -->
+  <div style="margin-top: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #1C1C22; background: #0E0E13; padding: 10px 0 22px 0;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 7px 0;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#6E6E7A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+      <span style="font-size: 11px; color: #6E6E7A;">Today</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 7px 0;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#6E6E7A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-5 3 3 4-6"/></svg>
+      <span style="font-size: 11px; color: #6E6E7A;">Progress</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 7px 0;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+      <span style="font-size: 11px; font-weight: 500; color: {{accent}};">Plan</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#C6F24E","options":["#C6F24E","#3DD6F5","#FF7A3C","#A78BFA"],"section":"Theme"},"$preview":{"width":390,"height":1880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#C6F24E';
+    const cyan = '#3DD6F5';
+
+    const splitLetters = ['U', 'L', 'R', 'U', 'L', 'U', 'R'];
+    const splitDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return {
+      accent: accent,
+      meals: [
+        {
+          name: 'Breakfast', kcal: '667', p: '29.8 g', c: '96.2 g', f: '17.6 g',
+          foods: ['Black coffee', 'Bread × 4', "Hershey's 38 g", 'Banana 100 g', 'Egg × 3']
+        },
+        {
+          name: 'Lunch', kcal: '833', p: '58.6 g', c: '126 g', f: '7.1 g',
+          foods: ['Cooked rice 400 g', 'Chicken 150 g', 'Veggies 100 g']
+        },
+        {
+          name: 'Pre-workout', kcal: '404', p: '5.8 g', c: '90.7 g', f: '8 g',
+          foods: ['Pori urundai', 'Banana 100 g', 'Lemon juice', 'Tender coconut']
+        },
+        {
+          name: 'Dinner', kcal: '638', p: '53.7 g', c: '85.5 g', f: '6.3 g',
+          foods: ['Rice 300 g', 'Chicken 150 g']
+        }
+      ],
+      supps: [
+        {
+          when: 'With breakfast',
+          items: [
+            { name: 'Fish oil', brand: 'Youwefit', dose: '2 gels' },
+            { name: 'Multivitamin', brand: 'Trexgenics', dose: '1 tab' },
+            { name: 'Vitamin D', brand: 'D Rise', dose: '1 gel' },
+            { name: 'Creatine', brand: 'Wellcore', dose: '5 g' }
+          ]
+        },
+        {
+          when: '30 min before workout',
+          items: [{ name: 'Alpha GPC', brand: 'Pure Nutrition', dose: '2 tabs' }]
+        },
+        {
+          when: '1 hr before sleep',
+          items: [{ name: 'Magnesium', brand: 'HK Vitals', dose: '2 tabs' }]
+        }
+      ],
+      split: splitLetters.map((l, i) => ({
+        letter: l,
+        day: splitDays[i],
+        color: l === 'U' ? accent : (l === 'L' ? cyan : '#6E6E7A'),
+        bg: l === 'R' ? '#141419' : '#17171D',
+        border: l === 'U' ? 'rgba(198,242,78,0.30)' : (l === 'L' ? 'rgba(61,214,245,0.30)' : '#26262E')
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

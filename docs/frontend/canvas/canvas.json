@@ -1,14 +1,23 @@
 {
+  "pages": [
+    { "id": "page-1", "name": "Coach — desktop" },
+    { "id": "page-2", "name": "Client — phone" }
+  ],
   "artboards": [
-    { "file": "Home.dc.html", "x": 0, "y": 0, "w": 1440, "h": 980, "title": "Home — daily overview" },
-    { "file": "Main.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Clients — roster grid" },
-    { "file": "ClientOverview.dc.html", "x": 0, "y": 1220, "w": 1440, "h": 1180, "title": "Client detail — Overview" },
-    { "file": "ClientCheckins.dc.html", "x": 1560, "y": 1220, "w": 1440, "h": 1020, "title": "Client detail — Check-ins" },
-    { "file": "ConsultationReview.dc.html", "x": 0, "y": 2540, "w": 1440, "h": 1160, "title": "Consultation review" }
+    { "file": "Home.dc.html", "page": "page-1", "x": 0, "y": 0, "w": 1440, "h": 980, "title": "Home — daily overview" },
+    { "file": "Main.dc.html", "page": "page-1", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Clients — roster grid" },
+    { "file": "ClientOverview.dc.html", "page": "page-1", "x": 0, "y": 1220, "w": 1440, "h": 1180, "title": "Client detail — Overview" },
+    { "file": "ClientCheckins.dc.html", "page": "page-1", "x": 1560, "y": 1220, "w": 1440, "h": 1020, "title": "Client detail — Check-ins" },
+    { "file": "ConsultationReview.dc.html", "page": "page-1", "x": 0, "y": 2540, "w": 1440, "h": 1160, "title": "Consultation review" },
+
+    { "file": "ClientCheckin.dc.html", "page": "page-2", "x": 0, "y": 0, "w": 390, "h": 1800, "title": "Today — daily check-in" },
+    { "file": "ClientHome.dc.html", "page": "page-2", "x": 510, "y": 0, "w": 390, "h": 1540, "title": "Today — after submitting" },
+    { "file": "ClientPlan.dc.html", "page": "page-2", "x": 1020, "y": 0, "w": 390, "h": 1880, "title": "Plan — read only" }
   ],
   "annotations": [
     {
       "id": "note-home",
+      "page": "page-1",
       "x": 0,
       "y": -180,
       "w": 600,
@@ -16,6 +25,7 @@
     },
     {
       "id": "note-roster",
+      "page": "page-1",
       "x": 1560,
       "y": -180,
       "w": 560,
@@ -23,6 +33,7 @@
     },
     {
       "id": "note-checkins",
+      "page": "page-1",
       "x": 1560,
       "y": 1060,
       "w": 620,
@@ -30,11 +41,37 @@
     },
     {
       "id": "note-accent",
+      "page": "page-1",
       "x": 0,
       "y": 2400,
       "w": 520,
       "text": "Accent colour is a live control on each artboard (the chip above the frame) — lime, cyan, orange and violet are loaded. Nothing else in the palette changes."
+    },
+
+    {
+      "id": "note-checkin-form",
+      "page": "page-2",
+      "x": 0,
+      "y": -230,
+      "w": 420,
+      "text": "CHECK-IN — the landing screen.\nOne scroll, five sections, one submit. Every control is at least 44px tall; the 1–10 scales are sliders with a big readout rather than ten tiny targets.\nTyped inputs kill the messy sheet data: no more \"79 kg\" in a number column."
+    },
+    {
+      "id": "note-client-home",
+      "page": "page-2",
+      "x": 510,
+      "y": -230,
+      "w": 420,
+      "text": "AFTER SUBMITTING — the same screen collapses to a done state and progress moves up.\nShows compliance, measurements and photos, as agreed. Form-check notes stay coach-only.\nEdit stays available the same day."
+    },
+    {
+      "id": "note-client-plan",
+      "page": "page-2",
+      "x": 1020,
+      "y": -230,
+      "w": 420,
+      "text": "PLAN — read-only, and the only screen a consultation client ever sees.\nMacros are per meal group (D-1), matching how you already write them.\nSupplements are regrouped BY TIMING rather than by supplement — say if you'd rather keep the sheet's order."
     }
   ],
-  "launch": { "view": "canvas" }
+  "launch": { "view": "canvas", "page": "page-2" }
 }
