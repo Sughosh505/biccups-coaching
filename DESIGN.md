@@ -220,6 +220,24 @@ Tabs are always **Today · Progress · Plan**.
 Active: `background: accent 18% mix; color: accent; font-weight: 500`. Inactive: `color: ink-3`.
 Trailing counts sit right-aligned in mono 11px — as a warn pill when they represent unread work, otherwise plain muted-2.
 
+### EmptyState
+
+Centred column, `padding: 40px 24px`, gap 10px: optional icon (24–26px, `--color-faint`) → title 13.5px in
+`--color-muted` → optional hint 12px in `--color-muted-2`, max-width 380px.
+
+The hint must say **why it's empty and what fills it**, never just "No data". Good: *"Clients appear here when
+they go quiet for two days."* Bad: *"Nothing to show."*
+
+### Form (desktop)
+
+Forms are Cards grouped by meaning, never one flat list of inputs.
+Field: label 12.5px `--color-ink-2` above a 36px input — `background: surface`, `border: 1px solid border`,
+radius 8px, `padding: 0 12px`, value 13.5px, focus moves the border to `--color-border-strong`.
+Units (`kg`, `cm`, `%`) are a fixed suffix inside the input in `--color-muted-2` — the user never types them.
+Required fields carry a `*` in `--color-muted-2`. Grid is 2 columns, or 3 for short numeric fields, gap 20px/16px.
+Actions sit below the last card, left-aligned: primary first, then a secondary Cancel.
+Errors render above the form: `border: 1px solid alert/30`, `background: alert/10`, text 13px `--color-alert`.
+
 ### Icons
 
 Inline SVG only. 24×24 viewBox, `fill="none"`, `stroke="currentColor"`, stroke-width **1.8–2.0** (2.2 for small
@@ -253,7 +271,9 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/login` | all | Email + password | *not yet designed* |
 | `/coach` | coach | Home — daily overview | `Home.dc.html` |
 | `/coach/clients` | coach | Roster grid | `Main.dc.html` |
+| `/coach/clients/new` | coach | Add client | derived — §4 Form |
 | `/coach/clients/[id]` | coach | Client detail — Overview tab | `ClientOverview.dc.html` |
+| `/coach/clients/[id]/edit` | coach | Edit client | derived — §4 Form |
 | `/coach/clients/[id]/checkins` | coach | Client detail — Check-ins tab | `ClientCheckins.dc.html` |
 | `/coach/consultations/[id]` | coach | Consultation review | `ConsultationReview.dc.html` |
 | `/client` | coaching_client | Today — check-in, or done state | `ClientCheckin.dc.html`, `ClientHome.dc.html` |
@@ -334,13 +354,13 @@ Never a silent gap.
 - Client detail tabs: Diet & supplements, Workouts, Progress
 - Plan view at desktop width
 - Reports (Phase 8)
-- Empty states, loading skeletons, error and toast states
+- Loading skeletons and toast states (empty and inline error states are now specced in §4)
 - Print stylesheet for the plan view — near-black is expensive on paper; likely a light print sheet for that one
   route rather than a second theme
 
 ## 11. Implementation notes
 
-- Fix the `body { font-family: Arial }` override in `globals.css` (see §2) before building any screen.
+- ~~Fix the `body { font-family: Arial }` override in `globals.css`~~ — done in Phase 2.
 - Per-meal-group macros (D-1) will need a small `plan_meals` schema decision in Phase 4 — where the group total
   lives. Raise it before writing the migration; **do not change the schema without asking.**
 - Build the §4 components as shared React components first. Screens compose them; screens do not re-style them.
