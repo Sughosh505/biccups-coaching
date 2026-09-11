@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Geist, system-ui, -apple-system, sans-serif; color: #171717; }
+    a { color: #1d4ed8; text-decoration: none; } a:hover { color: #1e40af; }
+    .mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+    .q { font-size: 11px; font-weight: 500; color: #a3a3a3; }
+    .a { font-size: 13.5px; color: #171717; line-height: 1.5; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1160px; background: #fafafa; overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- Header -->
+  <div style="background: #ffffff; border-bottom: 1px solid #e5e5e5; padding: 18px 32px 20px 32px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <span style="font-size: 12.5px; color: #737373;">Consultations</span>
+    </div>
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="mono" style="width: 46px; height: 46px; border-radius: 50%; background: color-mix(in oklab, {{accent}} 10%, white); color: {{accent}}; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500;">PR</div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em;">Priya Raghavan</h1>
+            <span style="font-size: 11px; font-weight: 500; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 20px; padding: 2px 9px;">New</span>
+          </div>
+          <span style="font-size: 12.5px; color: #737373;">Consultation form submitted 10 Sep 2026, 9:42 PM</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <span style="font-size: 13px; font-weight: 500; color: #404040; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 14px;">Mark consulted</span>
+        <span style="font-size: 13px; font-weight: 500; color: #ffffff; background: {{accent}}; border-radius: 8px; padding: 8px 14px;">Build plan</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; padding: 22px 32px;">
+
+    <!-- Responses -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+
+      <sc-for list="{{sections}}" as="s" hint-placeholder-count="4">
+        <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;">
+          <div style="padding: 12px 18px; border-bottom: 1px solid #f0f0f0;">
+            <span style="font-size: 13px; font-weight: 600;">{{s.title}}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; padding: 16px 18px;">
+            <sc-for list="{{s.pairs}}" as="p" hint-placeholder-count="4">
+              <div style="display: flex; flex-direction: column; gap: 4px; grid-column: {{p.span}};">
+                <span class="q">{{p.q}}</span>
+                <span class="a">{{p.a}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+
+    </div>
+
+    <!-- Right rail -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+
+      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
+          <span style="font-size: 13px; font-weight: 600;">Contact</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 13px; padding: 14px 16px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+            <span style="font-size: 12.5px; color: #404040;">priya.raghavan@gmail.com</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h4l2 5-3 2a13 13 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg>
+            <span class="mono" style="font-size: 12.5px; color: #404040;">+91 98842 20114</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
+          <span style="font-size: 13px; font-weight: 600;">Pipeline</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0; padding: 14px 16px;">
+
+          <div style="display: flex; align-items: flex-start; gap: 11px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span style="width: 9px; height: 9px; border-radius: 50%; background: {{accent}}; margin-top: 4px;"></span>
+              <span style="width: 1.5px; height: 30px; background: #e5e5e5;"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; font-weight: 500;">Form submitted</span>
+              <span style="font-size: 11.5px; color: #a3a3a3;">10 Sep 2026</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 11px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span style="width: 9px; height: 9px; border-radius: 50%; background: #ffffff; border: 1.5px solid #d4d4d4; margin-top: 4px;"></span>
+              <span style="width: 1.5px; height: 30px; background: #e5e5e5;"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; color: #a3a3a3;">Consultation call</span>
+              <span style="font-size: 11.5px; color: #d4d4d4;">Not yet</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 11px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span style="width: 9px; height: 9px; border-radius: 50%; background: #ffffff; border: 1.5px solid #d4d4d4; margin-top: 4px;"></span>
+              <span style="width: 1.5px; height: 30px; background: #e5e5e5;"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; color: #a3a3a3;">Plan built</span>
+              <span style="font-size: 11.5px; color: #d4d4d4;">Not yet</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 11px;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <span style="width: 9px; height: 9px; border-radius: 50%; background: #ffffff; border: 1.5px solid #d4d4d4; margin-top: 4px;"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; color: #a3a3a3;">View-only login sent</span>
+              <span style="font-size: 11.5px; color: #d4d4d4;">Not yet</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px;">
+        <span style="font-size: 13px; font-weight: 600;">Private note</span>
+        <span style="font-size: 12.5px; color: #a3a3a3; line-height: 1.5;">Add a note before the call — only you can see this.</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#1d4ed8","options":["#1d4ed8","#0f766e","#c2410c","#4338ca"],"section":"Theme"},"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const full = 'span 2', half = 'auto';
+    return {
+      accent: this.props.accent ?? '#1d4ed8',
+      sections: [
+        {
+          title: 'Basics',
+          pairs: [
+            { q: 'Age', a: '29', span: half },
+            { q: 'Height', a: '164 cm', span: half },
+            { q: 'Current weight', a: '71 kg', span: half },
+            { q: 'Goal weight', a: '61 kg', span: half },
+            { q: 'Occupation', a: 'Software engineer — desk job, 9 to 7', span: full }
+          ]
+        },
+        {
+          title: 'Goals',
+          pairs: [
+            { q: 'Primary goal', a: 'Fat loss', span: half },
+            { q: 'Target timeline', a: '5 to 6 months', span: half },
+            { q: 'What does success look like to you?', a: 'Fitting back into clothes from two years ago, and getting through a day without the 4pm energy crash.', span: full }
+          ]
+        },
+        {
+          title: 'Training history',
+          pairs: [
+            { q: 'Experience level', a: 'Beginner — 6 months on and off', span: half },
+            { q: 'Days available per week', a: '4', span: half },
+            { q: 'Gym access', a: 'Full commercial gym', span: half },
+            { q: 'Preferred training time', a: 'Early morning, 6 to 7 AM', span: half },
+            { q: 'Current routine', a: 'Treadmill 30 min, some dumbbell work. No structured programme.', span: full }
+          ]
+        },
+        {
+          title: 'Nutrition & health',
+          pairs: [
+            { q: 'Dietary preference', a: 'Vegetarian', span: half },
+            { q: 'Meals per day', a: '3 plus evening snack', span: half },
+            { q: 'Allergies', a: 'None', span: half },
+            { q: 'Average sleep', a: '6 hours', span: half },
+            { q: 'Injuries or medical conditions', a: 'Mild PCOS, diagnosed 2023. Lower back stiffness from sitting — no formal diagnosis.', span: full },
+            { q: 'Supplements currently taking', a: 'Multivitamin, vitamin D', span: full }
+          ]
+        }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

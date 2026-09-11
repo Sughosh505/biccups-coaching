@@ -1,0 +1,32 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Coach dashboard — roster grid" },
+    { "file": "ClientOverview.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1180, "title": "Client detail — Overview" },
+    { "file": "ClientCheckins.dc.html", "x": 0, "y": 1320, "w": 1440, "h": 1020, "title": "Client detail — Check-ins" },
+    { "file": "ConsultationReview.dc.html", "x": 1560, "y": 1320, "w": 1440, "h": 1160, "title": "Consultation review" }
+  ],
+  "annotations": [
+    {
+      "id": "note-dashboard",
+      "x": 0,
+      "y": -150,
+      "w": 560,
+      "text": "Roster grid: every client on one screen, problems sorted to the top.\nThe three things the spreadsheet can't show — trend direction, compliance %, and staleness — are the three columns that earn their place here."
+    },
+    {
+      "id": "note-checkins",
+      "x": 0,
+      "y": 1150,
+      "w": 620,
+      "text": "Week banding is deliberate — it mirrors the merged WEEK column in your sheet, but each band now carries its own averages.\nMissing days appear as inline rows rather than silent blanks."
+    },
+    {
+      "id": "note-accent",
+      "x": 1560,
+      "y": -150,
+      "w": 480,
+      "text": "Accent colour is a live control on each artboard (the chip above the frame) — blue, teal, rust and indigo are loaded. Nothing else in the palette changes."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

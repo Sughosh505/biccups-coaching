@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env*.example
 
+# seeded design canvas (2.5MB build artifact — rebuilt from the .dc.html sources)
+docs/frontend/canvas/coach-screens.html
+
 # vercel
 .vercel
 
