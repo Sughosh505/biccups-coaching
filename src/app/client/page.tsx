@@ -106,7 +106,7 @@ export default async function ClientTodayPage({
             </Link>
           </div>
 
-          <CutCard client={client} dashboard={dashboard} />
+          <CutCard client={client} dashboard={dashboard} now={now} />
         </div>
       ) : (
         <CheckinForm date={date} checkin={entry} photoUrl={photoUrl} />

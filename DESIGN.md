@@ -468,7 +468,7 @@ Never a silent gap.
 | — | Weight chart shows **raw daily weight only** — no rolling average, no smoothing. |
 | — | Chart ranges are **1M · 3M · 6M · All**. No year windows, no month paginator. |
 | — | Weights reach the chart **only** through client check-ins. The coach never adds one directly — it would fabricate a logged day and inflate compliance %. |
-| — | No share or export of a client's chart. Revisit only with a consent flow recorded in `docs/production-readiness.md` §6 first; this is health data about a named person. |
+| — | No share or export of a client's chart. Revisit only with a consent flow recorded in `docs/production-readiness.md` §5 first; this is health data about a named person. |
 
 ---
 

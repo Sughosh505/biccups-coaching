@@ -258,3 +258,222 @@ export function currentWeekSquares(checkinDates: string[], now = today()): DaySq
     return { date, label, state } as DaySquare;
   });
 }
+
+/* -------------------------------------------------------- Weight chart */
+
+export type WeightPoint = { date: string; weight: number };
+
+/** The fixed windows — DESIGN.md §4. Never 1Y/2Y/3Y; no client's history fills them. */
+export type ChartRange = "1m" | "3m" | "6m" | "all";
+
+const RANGE_DAYS: Record<Exclude<ChartRange, "all">, number> = {
+  "1m": 30,
+  "3m": 90,
+  "6m": 180,
+};
+
+export const RANGE_CHIP_LABELS: Record<ChartRange, string> = {
+  "1m": "1M",
+  "3m": "3M",
+  "6m": "6M",
+  all: "All",
+};
+
+/** Segments spanning more than this are drawn as dimmed connectors, not real line. */
+const MAX_GAP_DAYS = 7;
+
+/** Floor on the y-axis span, in kg, so scale noise can't be magnified into a landslide. */
+const MIN_DOMAIN_SPAN = 2;
+
+/**
+ * Where the chart's history begins: the earlier of `start_date` and the first logged
+ * weight — the same anchor `groupIntoWeeks` uses, so the chart and "Week 3" agree
+ * about when coaching began.
+ */
+export function chartAnchor(startDate: string | null, points: WeightPoint[]): string | null {
+  const candidates = [startDate, points.length ? points[0].date : null].filter(
+    (d): d is string => !!d,
+  );
+  return candidates.length ? candidates.sort()[0] : null;
+}
+
+export function historyDays(anchor: string | null, now = today()): number {
+  if (!anchor) return 0;
+  return Math.max(0, daysBetween(anchor, now) + 1);
+}
+
+/**
+ * A window longer than the client's history is not offered at all — DESIGN.md §4.
+ * `all` is always present, so a six-week client sees `1M · All`.
+ */
+export function availableRanges(days: number): ChartRange[] {
+  const windows = (Object.keys(RANGE_DAYS) as Exclude<ChartRange, "all">[]).filter(
+    (r) => days > RANGE_DAYS[r],
+  );
+  return [...windows, "all"];
+}
+
+/** `All` under 90 days of history, else `3M` — DESIGN.md §7. Never changed afterwards. */
+export function defaultChartRange(days: number): ChartRange {
+  const preferred: ChartRange = days < 90 ? "all" : "3m";
+  return availableRanges(days).includes(preferred) ? preferred : "all";
+}
+
+/**
+ * `to` is today, not the last logged day, so a client who stopped logging shows the
+ * trailing dead space instead of a line running confidently to the right edge.
+ */
+export function rangeWindow(
+  range: ChartRange,
+  anchor: string | null,
+  now = today(),
+): { from: string; to: string } {
+  if (range === "all") return { from: anchor ?? now, to: now };
+
+  const from = addDays(now, -(RANGE_DAYS[range] - 1));
+  // Never start before the client existed.
+  return { from: anchor && daysBetween(anchor, from) < 0 ? anchor : from, to: now };
+}
+
+export function rangeLabel(range: ChartRange, from: string): string {
+  if (range === "1m") return "last 30 days";
+  if (range === "3m") return "last 3 months";
+  if (range === "6m") return "last 6 months";
+  return `since ${formatShortDate(from)}`;
+}
+
+export function pointsInRange<T extends { date: string }>(
+  points: T[],
+  from: string,
+  to: string,
+): T[] {
+  return points.filter((p) => daysBetween(from, p.date) >= 0 && daysBetween(p.date, to) >= 0);
+}
+
+/**
+ * Last-in-range minus first-in-range — NOT latest minus `start_weight`. DESIGN.md §4.
+ * Rounded to 2dp, the precision weights are logged at, so the raw float error in
+ * e.g. 72.0 - 84.4 never reaches a caller that doesn't format it.
+ */
+export function rangeDelta(points: WeightPoint[]): number | null {
+  if (points.length < 2) return null;
+  const delta = points[points.length - 1].weight - points[0].weight;
+  return Math.round(delta * 100) / 100;
+}
+
+export type Domain = { min: number; max: number };
+
+/**
+ * 8% padding, rounded outward to 0.5 kg, with a 2 kg floor on the span — DESIGN.md §4.
+ * The goal deliberately does NOT widen this; see `goalInDomain`.
+ */
+export function niceDomain(weights: number[]): Domain {
+  if (!weights.length) return { min: 0, max: MIN_DOMAIN_SPAN };
+
+  let min = Math.min(...weights);
+  let max = Math.max(...weights);
+
+  const pad = (max - min) * 0.08;
+  min -= pad;
+  max += pad;
+
+  if (max - min < MIN_DOMAIN_SPAN) {
+    const mid = (min + max) / 2;
+    min = mid - MIN_DOMAIN_SPAN / 2;
+    max = mid + MIN_DOMAIN_SPAN / 2;
+  }
+
+  return { min: Math.floor(min * 2) / 2, max: Math.ceil(max * 2) / 2 };
+}
+
+/**
+ * The goal line renders only inside the domain — DESIGN.md §7. A client 12 kg from
+ * goal viewing `1M` would otherwise get a month of real movement squashed flat.
+ */
+export function goalInDomain(goal: number | null | undefined, domain: Domain): goal is number {
+  return goal != null && goal >= domain.min && goal <= domain.max;
+}
+
+/**
+ * Contiguous runs of logging, broken wherever more than a week passed unlogged. Each
+ * run draws as real line and fill; the connectors between them draw dimmed and unfilled,
+ * so an unmeasured stretch can't pass as steady progress (DESIGN.md §4, and §7's
+ * "never a silent gap" applied to charts).
+ */
+export function splitRuns(points: WeightPoint[]): WeightPoint[][] {
+  const runs: WeightPoint[][] = [];
+  let current: WeightPoint[] = [];
+
+  for (const point of points) {
+    const previous = current[current.length - 1];
+    if (previous && daysBetween(previous.date, point.date) > MAX_GAP_DAYS) {
+      runs.push(current);
+      current = [];
+    }
+    current.push(point);
+  }
+  if (current.length) runs.push(current);
+
+  return runs;
+}
+
+function weeklyTicks(from: string, to: string): string[] {
+  const ticks: string[] = [];
+  for (let offset = 0; daysBetween(addDays(from, offset), to) >= 0; offset += 7) {
+    ticks.push(addDays(from, offset));
+  }
+  return ticks;
+}
+
+function monthStarts(from: string, to: string): string[] {
+  const starts: string[] = [];
+  const begin = asUTCDate(from);
+  let cursor = Date.UTC(begin.getUTCFullYear(), begin.getUTCMonth(), 1);
+
+  for (;;) {
+    const iso = new Date(cursor).toISOString().slice(0, 10);
+    if (daysBetween(iso, to) < 0) break;
+    if (daysBetween(from, iso) >= 0) starts.push(iso);
+    const at = new Date(cursor);
+    cursor = Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1);
+  }
+  return starts;
+}
+
+/** Keeps the outermost entries, which is what "first and last always drawn" means. */
+function thin(values: string[], max: number): string[] {
+  if (values.length <= max) return values;
+  const step = (values.length - 1) / (max - 1);
+  const picked = Array.from({ length: max }, (_, i) => values[Math.round(i * step)]);
+  return Array.from(new Set(picked));
+}
+
+/** At most 5 x-axis ticks — weekly under `1M`, month starts above it. DESIGN.md §4. */
+export function axisTicks(range: ChartRange, from: string, to: string): string[] {
+  if (daysBetween(from, to) <= 0) return [from];
+
+  const candidates = range === "1m" ? weeklyTicks(from, to) : monthStarts(from, to);
+  return thin(candidates.length > 1 ? candidates : [from, to], 5);
+}
+
+/** "Sep" — month-only sibling of `formatShortDate`, for x-axis ticks above `1M`. */
+export function formatMonth(date: string): string {
+  return asUTCDate(date).toLocaleDateString("en-GB", { timeZone: "UTC", month: "short" });
+}
+
+/**
+ * The card title follows the goal, never a fixed "The cut" — DESIGN.md §7. A client
+ * lean bulking should not be told they are cutting.
+ */
+export function chartTitle(
+  current: number | null,
+  goal: number | null,
+  voice: "impersonal" | "possessive" = "impersonal",
+): string {
+  const possessive = voice === "possessive";
+  if (current == null || goal == null || Math.abs(goal - current) < 0.05) {
+    return possessive ? "Your weight" : "Body weight";
+  }
+  if (goal < current) return possessive ? "Your cut" : "The cut";
+  return possessive ? "Your build" : "The build";
+}

@@ -50,7 +50,7 @@ export default async function ClientProgressPage() {
       </header>
 
       <div className="flex flex-col gap-[22px] px-5 pb-6 pt-[22px]">
-        <CutCard client={client} dashboard={dashboard} />
+        <CutCard client={client} dashboard={dashboard} now={now} />
 
         {/* This week + compliance */}
         <Card className="flex flex-col gap-4 rounded-[13px] p-4">

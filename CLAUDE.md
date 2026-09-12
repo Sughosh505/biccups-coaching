@@ -84,3 +84,13 @@ tables and functions from `supabase/migrations/`, so new tables get audited auto
 - Consultation intake stays a Google Form (pre-account); the daily check-in is a native in-app form (post-account).
 - Payments are handled in a separate upstream app — do NOT build payments/invoicing here.
 - For the daily check-in form (Phase 3) and the plan builder (Phase 4), I'll provide screenshots of the current spreadsheets to match the layout.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
