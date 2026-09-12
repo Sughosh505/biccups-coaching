@@ -71,12 +71,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const matchesAnyNamespace = Object.values(ROLE_HOME).some((prefix) =>
-    pathname.startsWith(prefix),
-  );
-  const matchesOwnNamespace = pathname.startsWith(home);
+  // Fail CLOSED: an authenticated user may only be inside their own namespace.
+  // Anything else — including any route added later — bounces to their home rather
+  // than being allowed through by default. The `/` boundary check stops `/coach`
+  // from also matching a route like `/coachable`.
+  const inOwnNamespace = pathname === home || pathname.startsWith(`${home}/`);
 
-  if (matchesAnyNamespace && !matchesOwnNamespace) {
+  if (!inOwnNamespace) {
     const url = request.nextUrl.clone();
     url.pathname = home;
     return NextResponse.redirect(url);

@@ -4,6 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireCoach } from "@/lib/auth";
+
+/**
+ * Postgres error text can name columns, constraints and policies. Log it server-side
+ * and hand the user something generic — never round-trip it through a query string.
+ */
+function reportable(context: string, error: { message: string; code?: string }): string {
+  console.error(`[${context}] ${error.code ?? "error"}: ${error.message}`);
+  return `${context} failed. Please try again.`;
+}
 
 function text(form: FormData, key: string): string | null {
   const value = form.get(key);
@@ -38,27 +48,34 @@ function clientFields(form: FormData) {
 }
 
 export async function addClient(form: FormData) {
+  await requireCoach();
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("clients")
-    .insert(clientFields(form))
-    .select("id")
-    .single();
+  const fields = clientFields(form);
+  if (!fields.name) {
+    redirect(`/coach/clients/new?error=${encodeURIComponent("A name is required.")}`);
+  }
 
-  if (error) redirect(`/coach/clients/new?error=${encodeURIComponent(error.message)}`);
+  const { data, error } = await supabase.from("clients").insert(fields).select("id").single();
+
+  if (error) {
+    redirect(`/coach/clients/new?error=${encodeURIComponent(reportable("Adding the client", error))}`);
+  }
 
   revalidatePath("/coach", "layout");
   redirect(`/coach/clients/${data.id}`);
 }
 
 export async function saveClient(clientId: string, form: FormData) {
+  await requireCoach();
   const supabase = await createClient();
 
   const { error } = await supabase.from("clients").update(clientFields(form)).eq("id", clientId);
 
   if (error) {
-    redirect(`/coach/clients/${clientId}/edit?error=${encodeURIComponent(error.message)}`);
+    redirect(
+      `/coach/clients/${clientId}/edit?error=${encodeURIComponent(reportable("Saving the client", error))}`,
+    );
   }
 
   revalidatePath("/coach", "layout");
@@ -77,6 +94,10 @@ export async function createClientLogin(clientId: string, form: FormData) {
   function fail(msg: string): never {
     redirect(`/coach/clients/${clientId}?error=${encodeURIComponent(msg)}`);
   }
+
+  // This action wields the service-role key, which bypasses RLS. Without this
+  // assertion any authenticated user could mint coaching_client accounts.
+  await requireCoach();
 
   const email = text(form, "login_email");
   const password = text(form, "login_password");
@@ -103,6 +124,7 @@ export async function createClientLogin(clientId: string, form: FormData) {
   });
 
   if (createError || !created?.user) {
+    // Auth errors are safe and actionable ("email already registered"), so surface them.
     fail(createError?.message ?? "Could not create the account.");
   }
 
@@ -116,7 +138,7 @@ export async function createClientLogin(clientId: string, form: FormData) {
 
   if (profileError) {
     await admin.auth.admin.deleteUser(userId);
-    fail(`Could not create the profile: ${profileError.message}`);
+    fail(reportable("Creating the login", profileError));
   }
 
   const { error: linkError } = await admin
@@ -127,7 +149,7 @@ export async function createClientLogin(clientId: string, form: FormData) {
   if (linkError) {
     await admin.from("profiles").delete().eq("id", userId);
     await admin.auth.admin.deleteUser(userId);
-    fail(`Could not link the account: ${linkError.message}`);
+    fail(reportable("Linking the login", linkError));
   }
 
   revalidatePath("/coach", "layout");

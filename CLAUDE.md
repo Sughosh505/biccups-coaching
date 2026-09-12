@@ -26,6 +26,7 @@ Read all three before starting. The build plan is the source of truth for build 
 - Show me the plan for a phase before writing code.
 - Write the Row Level Security policies in Phase 1 and test them (try to read another client's data as a logged-in client — it must fail) BEFORE building any UI on top.
 - Never expose the Supabase service role key to the client. Anything touching secrets goes in server components or route handlers.
+- **Any server action or API route that uses `createAdminClient()` must call `requireCoach()` from `src/lib/auth.ts` first** — the service role bypasses RLS, and server actions are publicly reachable endpoints. See `docs/production-readiness.md`.
 - Ask before installing new dependencies or changing the database schema.
 - Commit after each phase with a clear message.
 - **Build the UI exactly as specified in `DESIGN.md`.** Do not invent colours, type sizes, spacing, components or layouts. If a screen needs something DESIGN.md doesn't cover, stop and ask, then add it to DESIGN.md before building it.
