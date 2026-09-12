@@ -43,6 +43,7 @@ The two audit scripts run at the end of **every phase**, not just before release
 | [production-readiness.md](production-readiness.md) | Launch runbook, what's hardened, known gaps, per-phase security duties |
 | [claude-code-build-plan.md](claude-code-build-plan.md) | The 8-phase build order and database schema |
 | [coaching-app-spec.md](coaching-app-spec.md) | Full product spec: roles, access matrix, workflows |
+| [consultation-webhook.md](consultation-webhook.md) | The Google Form → `/api/consultation-intake` Apps Script, its payload and setup |
 | [frontend/README.md](frontend/README.md) | Design decision log and index |
 | [frontend/01-research.md](frontend/01-research.md) | How other coaching platforms structure the coach side |
 | [frontend/02-spreadsheet-audit.md](frontend/02-spreadsheet-audit.md) | Field-by-field transcription of the original Google Sheet |

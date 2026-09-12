@@ -228,7 +228,9 @@ export default async function CoachHomePage() {
                       Submitted {new Date(c.created_at).toLocaleDateString("en-GB")}
                     </span>
                   </div>
-                  <span className="text-[12px] text-muted-2">Phase 5</span>
+                  <ButtonLink href={`/coach/consultations/${c.id}`} variant="outline">
+                    Review
+                  </ButtonLink>
                 </div>
               ))
             )}

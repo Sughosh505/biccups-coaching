@@ -196,7 +196,11 @@ export async function getPlanOwner(
 
   return {
     name: (data?.name as string | null) ?? "Deleted client",
-    href: data && coaching ? `/coach/clients/${ownerId}/diet` : null,
+    href: data
+      ? coaching
+        ? `/coach/clients/${ownerId}/diet`
+        : `/coach/consultations/${ownerId}`
+      : null,
     consultation: !coaching,
   };
 }

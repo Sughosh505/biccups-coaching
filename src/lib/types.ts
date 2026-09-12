@@ -64,16 +64,47 @@ export type Measurement = {
   left_thigh: number | null;
 };
 
+/**
+ * One answer as the Apps Script sends it. `section` is the Google Form page-break
+ * the question sat under, and is null for a form with no sections.
+ */
+export type ConsultationAnswer = {
+  section: string | null;
+  q: string;
+  a: string;
+};
+
+/**
+ * Two shapes reach this column and both must render.
+ *
+ * `{ fields: [...] }` is what the webhook writes: an ORDERED array, because jsonb
+ * normalises object keys by length then bytewise, so an object cannot preserve the
+ * order the coach wrote the form in. The bare record is the legacy shape still
+ * seeded by scripts/seed-demo.mjs.
+ */
+export type ConsultationFormResponses = { fields: ConsultationAnswer[] } | Record<string, unknown>;
+
 export type ConsultationClient = {
   id: string;
   auth_user_id: string | null;
   name: string | null;
   email: string | null;
   phone: string | null;
-  form_responses: Record<string, unknown> | null;
+  form_responses: ConsultationFormResponses | null;
+  /** The Google Form response id. Unique, and the reason a retried webhook is a no-op. */
+  form_response_id: string | null;
   status: "new" | "consulted" | "converted" | null;
+  consulted_at: string | null;
   converted_to_client_id: string | null;
   created_at: string;
+};
+
+/** Coach-only. Lives in its own table so a consultation client can never read it. */
+export type ConsultationNote = {
+  id: string;
+  consultation_client_id: string;
+  body: string | null;
+  updated_at: string | null;
 };
 
 export type Package = {

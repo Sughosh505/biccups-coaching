@@ -217,15 +217,35 @@ async function seed() {
       email: "priya@example.com",
       phone: "+91 98842 20114",
       status: "new",
+      form_response_id: "demo-priya-1",
+      // The shape the webhook writes: an ordered array, grouped into the Form's own
+      // sections. jsonb does not preserve object key order, so only an array can
+      // render the questions back in the order the coach asked them.
       form_responses: {
-        Age: "29",
-        Height: "164 cm",
-        "Current weight": "71 kg",
-        "Goal weight": "61 kg",
-        "Primary goal": "Fat loss",
-        "Days available per week": "4",
-        "Dietary preference": "Vegetarian",
-        "Injuries or medical conditions": "Mild PCOS, lower back stiffness from desk work.",
+        fields: [
+          { section: "Basics", q: "Age", a: "29" },
+          { section: "Basics", q: "Height", a: "164 cm" },
+          { section: "Basics", q: "Current weight", a: "71 kg" },
+          { section: "Basics", q: "Goal weight", a: "61 kg" },
+          { section: "Basics", q: "Occupation", a: "Software engineer — desk job, 9 to 7" },
+          { section: "Goals", q: "Primary goal", a: "Fat loss" },
+          { section: "Goals", q: "Target timeline", a: "5 to 6 months" },
+          {
+            section: "Goals",
+            q: "What does success look like to you?",
+            a: "Fitting back into clothes from two years ago, and getting through a day without the 4pm energy crash.",
+          },
+          { section: "Training history", q: "Experience level", a: "Beginner — 6 months on and off" },
+          { section: "Training history", q: "Days available per week", a: "4" },
+          { section: "Training history", q: "Gym access", a: "Full commercial gym" },
+          { section: "Nutrition & health", q: "Dietary preference", a: "Vegetarian" },
+          { section: "Nutrition & health", q: "Average sleep", a: "6 hours" },
+          {
+            section: "Nutrition & health",
+            q: "Injuries or medical conditions",
+            a: "Mild PCOS, diagnosed 2023. Lower back stiffness from sitting — no formal diagnosis.",
+          },
+        ],
       },
     },
     {
@@ -233,6 +253,8 @@ async function seed() {
       email: "sanjay@example.com",
       phone: "+91 90000 11111",
       status: "new",
+      // Deliberately left in the OLD flat shape: the review screen has to keep
+      // rendering records that predate the webhook, so one fixture proves it does.
       form_responses: { Age: "34", "Primary goal": "Muscle gain", "Days available per week": "5" },
     },
   ]);

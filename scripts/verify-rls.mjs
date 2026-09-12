@@ -481,12 +481,127 @@ check(
   accepted.length ? `accepted ${accepted.join(", ")}` : goodLink?.message,
 );
 
+// --- the consultation intake webhook -----------------------------------------
+// /api/* is excluded from the proxy matcher, so this route has no session, no role
+// and no redirect. The shared secret is the entire authentication, which makes it
+// the one thing worth proving adversarially rather than assuming.
+const INTAKE = `${BASE}/api/consultation-intake`;
+const SECRET = env.CONSULTATION_WEBHOOK_SECRET;
+const intakeStamp = Date.now();
+
+function intakeBody(responseId, extra = {}) {
+  return JSON.stringify({
+    responseId,
+    name: `Verify — intake ${intakeStamp}`,
+    email: `verify-intake-${intakeStamp}@example.com`,
+    phone: "+91 90000 00000",
+    fields: [
+      { section: "Basics", q: "Age", a: "29" },
+      { section: "Goals", q: "Primary goal", a: "Fat loss" },
+    ],
+    ...extra,
+  });
+}
+
+async function intakePost(headers, body) {
+  const res = await fetch(INTAKE, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...headers },
+    body,
+  });
+  return res.status;
+}
+
+async function intakeRows() {
+  const { data } = await admin
+    .from("consultation_clients")
+    .select("id")
+    .like("name", `Verify — intake ${intakeStamp}%`);
+  return data ?? [];
+}
+
+const noSecretStatus = await intakePost({}, intakeBody(`verify-nosecret-${intakeStamp}`));
+check(
+  "33. webhook rejects a POST with no secret header, and writes nothing",
+  noSecretStatus === 401 && (await intakeRows()).length === 0,
+  `status ${noSecretStatus}`,
+);
+
+// Same LENGTH as the real secret: a comparison that short-circuits on length would
+// pass a naive test using an obviously-wrong string.
+const wrongSecret = "x".repeat(SECRET.length);
+const wrongStatus = await intakePost(
+  { "x-webhook-secret": wrongSecret },
+  intakeBody(`verify-wrong-${intakeStamp}`),
+);
+check(
+  "34. webhook rejects a wrong secret of the same length, and writes nothing",
+  wrongStatus === 401 && (await intakeRows()).length === 0,
+  `status ${wrongStatus}`,
+);
+
+const oversizedStatus = await intakePost(
+  { "x-webhook-secret": SECRET },
+  intakeBody(`verify-big-${intakeStamp}`, { padding: "x".repeat(1_000_000) }),
+);
+check(
+  "35. webhook rejects an oversized body, and writes nothing",
+  oversizedStatus === 413 && (await intakeRows()).length === 0,
+  `status ${oversizedStatus}`,
+);
+
+const goodResponseId = `verify-ok-${intakeStamp}`;
+const okStatus = await intakePost({ "x-webhook-secret": SECRET }, intakeBody(goodResponseId));
+const afterFirst = await intakeRows();
+check(
+  "36. a valid submission creates exactly one consultation",
+  okStatus === 201 && afterFirst.length === 1,
+  `status ${okStatus}, ${afterFirst.length} row(s)`,
+);
+
+// Apps Script retries a failed webhook. A replay must be a no-op, not a duplicate
+// person in the coach's pipeline.
+const replayStatus = await intakePost({ "x-webhook-secret": SECRET }, intakeBody(goodResponseId));
+const afterReplay = await intakeRows();
+check(
+  "37. replaying the same form response creates no second row",
+  replayStatus === 200 && afterReplay.length === 1,
+  `status ${replayStatus}, ${afterReplay.length} row(s)`,
+);
+
+// --- the private note boundary ------------------------------------------------
+// The note is in its own table precisely because consultation_clients_select_own
+// would have exposed it on the parent row. Prove the separation actually holds.
+await admin.from("consultation_notes").insert({
+  consultation_client_id: consultRecord.id,
+  body: "Verify — coach eyes only",
+});
+
+const { data: leakedNotes } = await asConsult.from("consultation_notes").select("*");
+check(
+  "38. consultation client CANNOT read the coach's private note about them",
+  (leakedNotes ?? []).length === 0,
+  `sees ${(leakedNotes ?? []).length} note(s)`,
+);
+
+// consultation_clients_select_own is `auth_user_id = auth.uid()`. Nothing proved
+// the negative half of that until now.
+const { data: visibleConsults } = await asConsult.from("consultation_clients").select("id");
+check(
+  "39. consultation client CANNOT read another consultation client's row",
+  (visibleConsults ?? []).length === 1 && visibleConsults[0].id === consultRecord.id,
+  `sees ${(visibleConsults ?? []).length} row(s)`,
+);
+
 // --- cleanup: unlink before deleting, per the FK ------------------------------
 // Probe rows and objects go first: a leftover 2099 row collides with the unique
 // constraint on the next run and turns test 16 into a false failure.
 await admin.from("daily_checkins").delete().in("date", [PROBE_OWN_DATE, PROBE_CROSS_DATE]);
 await admin.storage.from(BUCKET).remove([ownPath, theirPath]);
 await admin.from("plans").delete().in("id", created_plans);
+// The webhook probes write real rows through the real route. consultation_notes
+// cascades from consultation_clients, so the private note goes with the record.
+await admin.from("consultation_clients").delete().like("name", `Verify — intake ${intakeStamp}%`);
 await admin.from("consultation_clients").delete().eq("id", consultRecord.id);
 await admin.from("profiles").delete().eq("id", consultUser.user.id);
 await admin.auth.admin.deleteUser(consultUser.user.id);
@@ -500,7 +615,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "33. cleanup restored the client row to how it was found",
+  "40. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
