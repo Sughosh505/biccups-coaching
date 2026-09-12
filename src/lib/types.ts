@@ -53,7 +53,8 @@ export type DailyCheckin = {
 export type Measurement = {
   id: string;
   client_id: string;
-  date: string | null;
+  /** Not null since Phase 7 — a measurement with no date cannot sit on a series. */
+  date: string;
   arms_right: number | null;
   arms_left: number | null;
   shoulders: number | null;
@@ -62,6 +63,30 @@ export type Measurement = {
   hip: number | null;
   right_thigh: number | null;
   left_thigh: number | null;
+};
+
+/** The eight measured sites, in the order the coach's sheet lists them. */
+export const MEASUREMENT_SITES = [
+  ["arms_right", "Arms — right"],
+  ["arms_left", "Arms — left"],
+  ["shoulders", "Shoulders"],
+  ["chest", "Chest"],
+  ["waist", "Waist"],
+  ["hip", "Hip"],
+  ["right_thigh", "Thigh — right"],
+  ["left_thigh", "Thigh — left"],
+] as const;
+
+export type MeasurementSite = (typeof MEASUREMENT_SITES)[number][0];
+
+export type ProgressPhoto = {
+  id: string;
+  client_id: string;
+  date: string;
+  /** The storage OBJECT PATH, not a URL — resolved through a signed URL to render. */
+  photo_url: string | null;
+  notes: string | null;
+  created_at: string | null;
 };
 
 /**

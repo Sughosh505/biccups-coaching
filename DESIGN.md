@@ -401,6 +401,34 @@ carrying a 15px `KeyIcon` in `--color-muted-2`. Three states:
 3. **Active** — one row: `Login active for {email}` in 13px `ink-2`, with where they sign in and what
    they see in 12.5px `--color-muted-2` on the right.
 
+### Measurement history (coach) — added in Phase 7
+
+A §4 Table, one row per dated set, newest first, with the eight sites in the fixed order of
+`MEASUREMENT_SITES` — the order the coach's own sheet lists them. Each cell is the value in mono
+12.5px `ink-2` with, beneath it, the change since the previous set in mono 10.5px `--color-muted-2`.
+
+**A delta carries no colour.** The trend-colour rule in §7 works because a weight has a goal to move
+toward; a chest and a waist do not share a direction, and the app stores no per-site goal, so
+tinting a `+0.4` green or red would be inventing a judgement. Sign and magnitude only.
+
+A delta renders only when both sets have that site filled in, and a change under 0.05 cm renders as
+nothing rather than `0.0`. Missing values are `—` per §7.
+
+Entry is a §4 Form card above the table: a date, then a 4-column grid of the eight sites with `cm` as
+a fixed suffix. **Saving a date that already exists replaces that set**, and the form says so — a
+coach re-measuring on the same day is correcting the entry, not adding a second point.
+
+### Progress photo gallery — added in Phase 7
+
+Grouped by date, newest first, each date a row of fixed-ratio tiles (110×150 desktop, 124×168 phone,
+radius 8px desktop / 11px phone, `background: sunken`, 1px `border`, `object-fit: cover`). The date
+is mono 13px `ink` with the set's note beside it in 12px `--color-muted-2`.
+
+Freeform per D-3: any number of photos per date, no front/side/back slots, so the row simply wraps on
+desktop and scrolls horizontally on phone. The coach's tiles carry a delete control in the top-right;
+the client's are read-only — clients never add, replace or delete a progress photo, and that is
+enforced by the storage policy, not the absence of a button.
+
 ### Slider (1–10 scales)
 
 Row is **44px tall**. Track 6px, radius 4px, `background: divider-faint`. Fill accent. Thumb 26px circle, accent,
@@ -528,8 +556,10 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/coach/clients/[id]/edit` | coach | Edit client | derived — §4 Form |
 | `/coach/clients/[id]/checkins` | coach | Client detail — Check-ins tab | `ClientCheckins.dc.html` |
 | `/coach/clients/[id]/diet` | coach | Client detail — Diet & supplements tab | `ClientPlan.dc.html` |
+| `/coach/clients/[id]/progress` | coach | Client detail — Progress tab (measurements + photos) | derived — §4 Table, §4 Form |
 | `/coach/consultations` | coach | Consultations list | derived — §4 Table |
 | `/coach/consultations/[id]` | coach | Consultation review | `ConsultationReview.dc.html` |
+| `/coach/reports` | coach | Reports — compliance | derived — §4 Table, §4 Stat tile |
 | `/coach/plans` | coach | Plans list | derived — §4 Table |
 | `/coach/plans/new` | coach | New plan — pick the client it belongs to | derived — §4 Form |
 | `/coach/plans/[id]` | coach | Plan builder | derived — §4 Plan builder |
@@ -572,6 +602,17 @@ EmptyState is only for a client with fewer than two weights in their entire hist
 
 **The weight chart's card title follows the goal** — `The cut` below, `The build` above, `Body weight` when no
 goal is set. Same reason as the trend colour.
+
+**Reports sort by the weakest, not alphabetically.** `/coach/reports` orders by 30-day compliance
+ascending — the screen exists to answer "who needs chasing", and a list sorted by name buries that
+under whoever is called Aarav.
+
+**A client who started inside the reporting window is only counted from their start date.** Someone
+three days into coaching with three check-ins is at 100%, not 10%. Judging a partial window against
+its full length makes every new client look like a failure and makes the number useless.
+
+**A measurement delta is never coloured.** See §4 Measurement history: sites have no goal to move
+toward, so sign and magnitude are the whole story.
 
 **Compliance thresholds** — `% of days with a check-in since start_date`:
 `≥ 85%` accent · `60–84%` warn · `< 60%` alert.
@@ -690,14 +731,15 @@ appear there and who puts it there, per §4 EmptyState.
 | D-7 | The plan carries **one Lyfta programme link**, not one per training day. It is a different field from `daily_checkins.lyfta_link`: the plan link is the coach handing over the programme, the check-in link is the client logging the session they did. |
 | — | Plan totals are computed from the groups and never written to the database. Two places to change one number is how the sheet's totals went stale. |
 | D-8 | The coach's **private note on a consultation lives in its own table** (`consultation_notes`), never a column on `consultation_clients`. That table carries `consultation_clients_select_own`, so a column there would be readable by the consultation client the moment Phase 6 gives them a login — and the card says "only you can see this". |
+| D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
+| D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
 | D-10 | The consultation login's first password is **generated, not typed**, and shown once. The admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on their own screen. |
 | D-9 | **Consultation form responses are stored as an ordered array** (`{ fields: [{section, q, a}] }`), not an object keyed by question. `jsonb` normalises object keys by length then bytewise, so an object cannot render the coach's questions back in the order they were asked. Sections come from the Google Form's page breaks, sent by the Apps Script. |
 
 ## 10. Not yet designed — ask before building
 
 - Login screen
-- Client detail tabs: Workouts, Progress
-- Reports (Phase 8)
+- Client detail tab: Workouts
 - Loading skeletons and toast states (empty and inline error states are now specced in §4)
 - Print stylesheet for the plan view — near-black is expensive on paper; likely a light print sheet for that one
   route rather than a second theme

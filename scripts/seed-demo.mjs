@@ -196,12 +196,22 @@ async function seed() {
 
     await supabase.from("daily_checkins").insert(rows);
 
-    await supabase.from("measurements").insert({
-      client_id: client.id,
-      date: daysAgo(days - 1),
-      arms_right: 15, arms_left: 15, shoulders: 51,
-      chest: 41, waist: 36, hip: 57, right_thigh: 23, left_thigh: 23,
-    });
+    // Two sets, so the history table and the client's "change since last time"
+    // have something to show. One set renders, but proves nothing about deltas.
+    await supabase.from("measurements").insert([
+      {
+        client_id: client.id,
+        date: daysAgo(days - 1),
+        arms_right: 15, arms_left: 15, shoulders: 51,
+        chest: 41, waist: 36, hip: 57, right_thigh: 23, left_thigh: 23,
+      },
+      {
+        client_id: client.id,
+        date: daysAgo(Math.max(1, Math.floor(days / 3))),
+        arms_right: 15.4, arms_left: 15.3, shoulders: 51.5,
+        chest: 41.2, waist: 34.4, hip: 55.8, right_thigh: 23.4, left_thigh: 23.3,
+      },
+    ]);
 
     console.log(`${PREFIX}${spec.name}: ${rows.length}/${days} check-ins`);
   }

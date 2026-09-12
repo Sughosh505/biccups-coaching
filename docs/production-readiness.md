@@ -53,6 +53,12 @@ Ordered. Don't skip the verification at the end.
        | Bucket | Public | Object path | Policies on `storage.objects` |
        |---|---|---|---|
        | `daily-photos` | **no** | `<client_id>/<date>-<uuid>.<ext>` | `daily_photos_client_all` — `for all`, both `using` and `with check`, scoped to `(storage.foldername(name))[1] = public.current_client_id()::text`<br>`daily_photos_coach_all` — `for all`, scoped to `public.is_coach()` |
+       | `progress-photos` | **no** | `<client_id>/<date>-<uuid>.<ext>` | `progress_photos_storage_client_read` — **`for select` only**, scoped to `(storage.foldername(name))[1] = public.current_client_id()::text`<br>`progress_photos_storage_coach_all` — `for all`, scoped to `public.is_coach()` |
+
+       The two buckets are deliberately **not** the same shape. A client uploads their own diet
+       photo, so `daily-photos` gives them `for all`; the coach takes the progress photos and the
+       client only looks at them, so `progress-photos` gives the client `select` and nothing else.
+       Created by the Phase 7 migration (`20260913030000_progress.sql`), so step 2 covers both.
 
        Diet photos are served only through `createSignedUrl(path, 120)` (`src/lib/queries/client.ts`).
        The column `daily_checkins.diet_photo_url` holds the **object path**, not a URL — a private
@@ -99,7 +105,7 @@ Ordered. Don't skip the verification at the end.
 
 20. [ ] Point `.env.local` at the production project temporarily, then:
 ```bash
-node scripts/verify-rls.mjs          # expect 43/43
+node scripts/verify-rls.mjs          # expect 50/50
 node scripts/audit-security.mjs      # expect 0 HIGH; signup and password findings must be clear
 npm audit --omit=dev                 # expect 0 vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
@@ -201,9 +207,12 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
 
 - ~~**Phase 3 — Supabase Storage** for diet photos~~ — **done.** Private `daily-photos` bucket with
   owner-scoped policies, 120-second signed URLs, and server-side MIME and size checks. Recorded in §2
-  step 5 and covered by both gate scripts. Progress-photo storage is still outstanding: **Phase 7 must
-  reuse this bucket pattern rather than creating a public one**, and must add insert policies to
-  `progress_photos`, which is coach-write-only today.
+  step 5 and covered by both gate scripts.
+- ~~**Phase 7 — progress-photo storage** must reuse that bucket pattern rather than creating a public
+  one~~ — **done.** Private `progress-photos` bucket, 120-second signed URLs issued in one batched
+  call, MIME and size re-checked server-side, and a failed batch removes the objects it already wrote
+  rather than orphaning them. `progress_photos` stays coach-write by design: the client reads and
+  nothing more, which checks 42-47 prove from the client side.
 - ~~**Phase 5 — the consultation webhook** is public and unauthenticated by design~~ — **done.** The
   secret is compared as sha256 digests through `crypto.timingSafeEqual` (equal-length buffers, so the
   throw cannot become a length oracle), the body is capped at 64 KB while streaming rather than after
