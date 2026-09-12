@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getClientDetail } from "@/lib/queries/coach";
 import { createClientLogin } from "@/app/coach/clients/actions";
-import { complianceTone, describeLastCheckin, formatShortDate } from "@/lib/metrics";
+import { complianceTone, describeLastCheckin, today } from "@/lib/metrics";
 import {
   Button,
   Card,
@@ -10,9 +10,9 @@ import {
   Field,
   ProgressBar,
   StatTile,
-  WeightChart,
 } from "@/components/ui";
-import { InfoIcon, KeyIcon } from "@/components/icons";
+import { RangedWeightChart } from "@/components/ui/WeightChart";
+import { KeyIcon } from "@/components/icons";
 
 const MEASUREMENT_FIELDS = [
   ["Arms — right", "arms_right"],
@@ -112,40 +112,24 @@ export default async function ClientOverviewPage({
         />
       </div>
 
-      {/* The cut */}
-      <Card>
-        <CardHeader
-          title="The cut"
-          meta={<span className="text-[12px] text-muted-2">Daily weight from check-ins</span>}
-        />
-        {series.length < 2 ? (
-          <EmptyState
-            icon={<InfoIcon size={24} />}
-            title="Not enough check-ins to chart yet"
-            hint="The weight trend and goal line appear here once this client has logged a weight on two days."
-          />
-        ) : (
-          <div className="flex flex-col gap-3.5 px-5 py-4">
-            <WeightChart
-              points={series}
-              goal={client.goal_weight}
-              variant="desktop"
-              startLabel={formatShortDate(series[0].date)}
-              width={880}
-              height={200}
+      {/* The cut — title, range and delta all follow the goal (DESIGN.md §4, §7) */}
+      <RangedWeightChart
+        points={series}
+        goal={client.goal_weight}
+        startDate={client.start_date}
+        now={today()}
+        variant="desktop"
+        latestWeight={current}
+        footer={
+          <div className="flex items-center gap-2.5">
+            <ProgressBar
+              pct={goalProgress ?? 0}
+              tone={compliance ? complianceTone(compliance) : "good"}
             />
-            <div className="flex items-center gap-2.5">
-              <ProgressBar
-                pct={goalProgress ?? 0}
-                tone={compliance ? complianceTone(compliance) : "good"}
-              />
-              <span className="tnum text-[12px] text-muted">
-                {series.length} weights logged
-              </span>
-            </div>
+            <span className="tnum text-[12px] text-muted">{series.length} weights logged</span>
           </div>
-        )}
-      </Card>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4">
         {/* Details */}
