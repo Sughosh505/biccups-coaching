@@ -68,6 +68,9 @@ export async function updateSession(request: NextRequest) {
   if (isPublicPath || pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = home;
+    // Drop the old path's query. Carrying it over turned /login?error=... into
+    // /client?error=..., so a login-page error surfaced as a check-in error.
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
@@ -80,6 +83,7 @@ export async function updateSession(request: NextRequest) {
   if (!inOwnNamespace) {
     const url = request.nextUrl.clone();
     url.pathname = home;
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

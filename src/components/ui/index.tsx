@@ -192,11 +192,16 @@ const AVATAR_SIZES = {
 
 export function initialsOf(name: string | null | undefined): string {
   if (!name) return "??";
-  return name
+  // Skip separator words. "Demo — Arjun Pillai" must read DA, never "D—".
+  const words = name
     .trim()
     .split(/\s+/)
+    .filter((part) => /^[\p{L}\p{N}]/u.test(part));
+
+  if (!words.length) return "??";
+  return words
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
+    .map((part) => part[0].toUpperCase())
     .join("");
 }
 
@@ -378,5 +383,197 @@ export function TextareaField({
         className="rounded-lg border border-border bg-surface px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none placeholder:text-faint focus:border-border-strong"
       />
     </label>
+  );
+}
+
+/* ---------------------------------------------------------- WeightChart */
+
+export type WeightPoint = { date: string; weight: number };
+
+/**
+ * "The cut" — DESIGN.md §4. Hand-rolled rather than charted by a library so the
+ * stroke widths, dash array and fill opacities are exactly the spec, and so it
+ * stays a server component with no client JS.
+ */
+export function WeightChart({
+  points,
+  goal,
+  variant = "phone",
+  startLabel,
+  height = 146,
+  width = 318,
+}: {
+  points: WeightPoint[];
+  goal?: number | null;
+  variant?: "phone" | "desktop";
+  startLabel?: string;
+  height?: number;
+  width?: number;
+}) {
+  if (points.length < 2) {
+    return (
+      <EmptyState
+        title="Not enough check-ins to chart yet"
+        hint="The weight line and goal marker appear once there are two days of weight logged."
+      />
+    );
+  }
+
+  const padTop = 8;
+  const padBottom = 26;
+  const plotH = height - padTop - padBottom;
+
+  const weights = points.map((p) => p.weight);
+  const domain = goal != null ? [...weights, goal] : weights;
+  const min = Math.min(...domain);
+  const max = Math.max(...domain);
+  const span = max - min || 1;
+
+  const x = (i: number) => (i * width) / (points.length - 1);
+  const y = (v: number) => padTop + (1 - (v - min) / span) * plotH;
+
+  const line = points.map((p, i) => `${x(i).toFixed(1)},${y(p.weight).toFixed(1)}`).join(" ");
+  const baseline = (padTop + plotH).toFixed(1);
+  const area = `M${line.split(" ").join(" L")} L${width},${baseline} L0,${baseline} Z`;
+
+  const gridline = variant === "phone" ? "var(--color-divider-soft)" : "var(--color-surface-3)";
+  const areaOpacity = variant === "phone" ? 0.12 : 0.14;
+  const last = points[points.length - 1];
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="h-auto w-full"
+      fill="none"
+      role="img"
+      aria-label={`Weight trend, ${points.length} days, latest ${last.weight} kg${
+        goal != null ? `, goal ${goal} kg` : ""
+      }`}
+    >
+      {[0.25, 0.5, 0.75].map((f) => (
+        <line
+          key={f}
+          x1="0"
+          y1={padTop + plotH * f}
+          x2={width}
+          y2={padTop + plotH * f}
+          stroke={gridline}
+          strokeWidth="1"
+        />
+      ))}
+
+      <path d={area} fill="var(--color-accent)" fillOpacity={areaOpacity} />
+      <polyline
+        points={line}
+        stroke="var(--color-accent)"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {goal != null ? (
+        <line
+          x1="0"
+          y1={y(goal)}
+          x2={width}
+          y2={y(goal)}
+          stroke="var(--color-faint)"
+          strokeWidth="1.5"
+          strokeDasharray="5 4"
+        />
+      ) : null}
+
+      <circle cx={width} cy={y(last.weight)} r="4.5" fill="var(--color-accent)" />
+
+      {startLabel ? (
+        <text
+          x="0"
+          y={height - 4}
+          fontFamily="var(--font-mono)"
+          fontSize="10"
+          fill="var(--color-muted-2)"
+        >
+          {startLabel}
+        </text>
+      ) : null}
+      {goal != null ? (
+        <text
+          x={width}
+          y={height - 4}
+          textAnchor="end"
+          fontFamily="var(--font-mono)"
+          fontSize="10"
+          fill="var(--color-muted-2)"
+        >
+          goal {goal}
+        </text>
+      ) : null}
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------- WeekSquares */
+
+export type WeekSquareState = "logged" | "missed" | "future";
+
+const SQUARE_FILL: Record<WeekSquareState, string> = {
+  logged: "bg-accent",
+  missed: "bg-divider-faint",
+  future: "bg-surface",
+};
+
+/**
+ * DESIGN.md §7 week-square states, shared by the coach roster (dots) and the
+ * client's own week (labelled days). Only the size differs; the colour rule does not.
+ */
+export function WeekSquares({
+  days,
+  size = "dot",
+}: {
+  days: { date: string; label?: string; state: WeekSquareState }[];
+  size?: "dot" | "day";
+}) {
+  if (size === "dot") {
+    return (
+      <span className="flex gap-[5px]">
+        {days.map((d) => (
+          <span
+            key={d.date}
+            title={d.date}
+            className={`h-[13px] w-[13px] rounded-[3.5px] ${SQUARE_FILL[d.state]}`}
+          />
+        ))}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between">
+      {days.map((d) => (
+        <div key={d.date} className="flex flex-col items-center gap-2">
+          <span
+            title={d.date}
+            className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] ${SQUARE_FILL[d.state]}`}
+          >
+            {d.state === "logged" ? (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--color-on-accent)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            ) : null}
+          </span>
+          <span className="tnum text-[11px] text-muted-2">{d.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }

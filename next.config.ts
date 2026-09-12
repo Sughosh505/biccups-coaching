@@ -24,6 +24,13 @@ const csp = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // Check-ins carry a diet photo. The client downscales before upload, but a
+  // browser that skips that path must still get through; the real gate is the
+  // 5MB server-side check in src/app/client/actions.ts.
+  experimental: {
+    serverActions: { bodySizeLimit: "6mb" },
+  },
+
   async headers() {
     return [
       {

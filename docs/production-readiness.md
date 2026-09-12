@@ -46,8 +46,18 @@ Ordered. Don't skip the verification at the end.
 3. [ ] Create your coach auth user: **Authentication → Users → Add user**, with *Auto Confirm* on.
 4. [ ] Copy that user's UUID, then in the SQL editor:
        `insert into public.profiles (id, role, display_name) values ('<uuid>', 'coach', '<your name>');`
-5. [ ] Create Storage buckets and their RLS policies.
-       *Phase 3 adds these — **record the exact buckets and policies here when built**.*
+5. [ ] Storage buckets. **Created by the Phase 3 migration, not by hand** —
+       `supabase/migrations/20260912000000_checkin_storage.sql` inserts them, so step 2 already did this.
+       Confirm in **Storage** that the bucket below exists and is **not** public:
+
+       | Bucket | Public | Object path | Policies on `storage.objects` |
+       |---|---|---|---|
+       | `daily-photos` | **no** | `<client_id>/<date>-<uuid>.<ext>` | `daily_photos_client_all` — `for all`, both `using` and `with check`, scoped to `(storage.foldername(name))[1] = public.current_client_id()::text`<br>`daily_photos_coach_all` — `for all`, scoped to `public.is_coach()` |
+
+       Diet photos are served only through `createSignedUrl(path, 120)` (`src/lib/queries/client.ts`).
+       The column `daily_checkins.diet_photo_url` holds the **object path**, not a URL — a private
+       bucket has no stable address. Uploads go through the client's own session, never the service
+       role, and MIME type and size are re-checked server-side in `src/app/client/actions.ts`.
 
 ### B. Lock down production auth
 
@@ -85,7 +95,7 @@ Ordered. Don't skip the verification at the end.
 
 20. [ ] Point `.env.local` at the production project temporarily, then:
 ```bash
-node scripts/verify-rls.mjs          # expect 14/14
+node scripts/verify-rls.mjs          # expect 23/23
 node scripts/audit-security.mjs      # expect 0 HIGH; signup and password findings must be clear
 npm audit --omit=dev                 # expect 0 vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
@@ -128,6 +138,12 @@ Verified clean: RLS blocks all anonymous reads and writes on all 12 tables, RLS 
 table, every table has at least one policy, all three `SECURITY DEFINER` helpers pin `search_path`, the
 service-role key appears nowhere in the build output, and a client cannot escalate their own role to coach.
 
+Since Phase 3 the gate also proves the check-in write boundary: a client cannot insert, update, reassign
+or delete another client's check-in, one-per-day is enforced by the database rather than the UI, and the
+`daily-photos` bucket is private, carries owner-scoped policies, is not listable anonymously and serves
+nothing over the public object route. Buckets are enumerated from `insert into storage.buckets` in the
+migrations — the `create table` discovery cannot see them, so §10 of the audit script does it separately.
+
 ---
 
 ## 5. Known gaps, deliberately deferred
@@ -152,10 +168,11 @@ service-role key appears nowhere in the build output, and a client cannot escala
 
 ## 6. Security work upcoming phases must not skip
 
-- **Phase 3 — Supabase Storage** for diet and progress photos. Buckets default to **public** in the
-  dashboard. These are photos of people's bodies and meals: make the bucket **private**, add storage RLS
-  policies scoped to `auth.uid()`, serve via short-expiry signed URLs, and validate MIME type and size
-  server-side. Then record the buckets and policies in §2 step 5.
+- ~~**Phase 3 — Supabase Storage** for diet photos~~ — **done.** Private `daily-photos` bucket with
+  owner-scoped policies, 120-second signed URLs, and server-side MIME and size checks. Recorded in §2
+  step 5 and covered by both gate scripts. Progress-photo storage is still outstanding: **Phase 7 must
+  reuse this bucket pattern rather than creating a public one**, and must add insert policies to
+  `progress_photos`, which is coach-write-only today.
 - **Phase 5 — the consultation webhook** is public and unauthenticated by design. `/api/*` is excluded
   from the proxy matcher, so **every API route must authenticate itself**. Compare the shared secret with
   `crypto.timingSafeEqual`, reject oversized bodies, rate-limit it, and treat the Google Form payload as

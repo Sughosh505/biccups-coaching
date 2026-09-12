@@ -42,8 +42,12 @@ export type DailyCheckin = {
   digestion_issues: boolean | null;
   stress: number | null;
   lyfta_link: string | null;
+  rest_day: boolean;
+  /** Storage object path in the private `daily-photos` bucket, not a URL. */
   diet_photo_url: string | null;
+  notes: string | null;
   created_at: string;
+  updated_at: string | null;
 };
 
 export type Measurement = {

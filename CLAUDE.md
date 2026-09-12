@@ -66,7 +66,7 @@ tables and functions from `supabase/migrations/`, so new tables get audited auto
 - **New secret env var** → never prefixed `NEXT_PUBLIC_`, and add it to `.env.local.example`.
 - **Errors shown to users** → never surface raw Postgres error text; log it server-side and show a
   generic message.
-- If a security gap is knowingly deferred, write it into `docs/production-readiness.md` §6 rather than
+- If a security gap is knowingly deferred, write it into `docs/production-readiness.md` §5 rather than
   leaving it undocumented.
 
 ## Git workflow
@@ -77,7 +77,7 @@ tables and functions from `supabase/migrations/`, so new tables get audited auto
 
 ## Environment
 - Supabase project is set up manually by me in the dashboard; I'll provide the URL and keys in `.env.local`. You cannot click through the Supabase dashboard — tell me what env vars you need.
-- **The current Supabase project is development, permanently.** A fresh project is created for production at ship time. So: all schema changes go into `supabase/migrations/` files that can rebuild the database from scratch — never into the dashboard Table Editor — and anything configured by hand in the dashboard gets recorded in `docs/production-readiness.md` §5 so it can be recreated.
+- **The current Supabase project is development, permanently.** A fresh project is created for production at ship time. So: all schema changes go into `supabase/migrations/` files that can rebuild the database from scratch — never into the dashboard Table Editor — and anything configured by hand in the dashboard gets recorded in `docs/production-readiness.md` §2 so it can be recreated.
 - Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `CONSULTATION_WEBHOOK_SECRET`.
 
 ## Notes

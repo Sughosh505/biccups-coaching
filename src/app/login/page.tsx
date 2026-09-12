@@ -12,7 +12,9 @@ export default async function LoginPage({
       ? "Incorrect email or password."
       : error === "no-profile"
         ? "This account has no role assigned yet. Contact your coach."
-        : null;
+        : error === "unlinked"
+          ? "This login isn't attached to a client record yet. Contact your coach."
+          : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-base px-5">

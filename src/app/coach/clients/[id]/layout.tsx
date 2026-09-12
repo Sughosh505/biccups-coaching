@@ -4,15 +4,7 @@ import { getClientDetail } from "@/lib/queries/coach";
 import { daysBetween, today } from "@/lib/metrics";
 import { Avatar, ButtonLink, StatusChip } from "@/components/ui";
 import { ChevronLeftIcon } from "@/components/icons";
-
-// Tabs for unbuilt phases render muted rather than hidden — they show the roadmap.
-const TABS = [
-  { label: "Overview", href: "", ready: true },
-  { label: "Check-ins", href: "/checkins", ready: false },
-  { label: "Diet & supplements", href: "/diet", ready: false },
-  { label: "Workouts", href: "/workouts", ready: false },
-  { label: "Progress", href: "/progress", ready: false },
-];
+import { ClientTabs } from "@/components/coach/ClientTabs";
 
 export default async function ClientLayout({
   children,
@@ -78,27 +70,7 @@ export default async function ClientLayout({
           </div>
         </div>
 
-        <nav className="mt-[18px] flex items-center gap-[26px]">
-          {TABS.map((tab) =>
-            tab.ready ? (
-              <Link
-                key={tab.label}
-                href={`/coach/clients/${id}${tab.href}`}
-                className="border-b-2 border-accent pb-2.5 text-[13.5px] font-medium text-accent"
-              >
-                {tab.label}
-              </Link>
-            ) : (
-              <span
-                key={tab.label}
-                title="Coming in a later phase"
-                className="cursor-not-allowed border-b-2 border-transparent pb-2.5 text-[13.5px] text-faint"
-              >
-                {tab.label}
-              </span>
-            ),
-          )}
-        </nav>
+        <ClientTabs clientId={id} />
       </div>
 
       {children}
