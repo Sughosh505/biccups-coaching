@@ -99,7 +99,7 @@ Ordered. Don't skip the verification at the end.
 
 20. [ ] Point `.env.local` at the production project temporarily, then:
 ```bash
-node scripts/verify-rls.mjs          # expect 40/40
+node scripts/verify-rls.mjs          # expect 42/42
 node scripts/audit-security.mjs      # expect 0 HIGH; signup and password findings must be clear
 npm audit --omit=dev                 # expect 0 vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
@@ -179,6 +179,11 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   are what actually protect the table; the limiter only blunts volume.
 - **`TIMEZONE` is hardcoded** to `Asia/Kolkata` in `src/lib/metrics.ts`. Correct today; wrong the moment
   you coach someone in another timezone, at which point it belongs on the client record.
+- **A consultation client's first password is delivered by hand.** No email is sent: the coach reads
+  the generated password off the screen once and passes it on. That puts it in whatever channel they
+  choose — WhatsApp, a phone call — which is outside the app's control, and there is no
+  "resend password" flow. Recovery today means deleting the auth user in Supabase and issuing a new
+  login. A real password-reset email flow is the fix when it starts to hurt.
 - **No audit trail.** Nothing records who changed a client's plan or weight, or when. Phase 4 made this
   slightly more visible: `plans.updated_at` moves on every save, but it records *when*, not *who* or
   *what changed*, and a published plan is edited in place under the client with no version history.
@@ -202,11 +207,13 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   the fact, every field is length-capped and coerced, replays are absorbed by a unique index, and
   responses carry no body. Rate limiting is in-memory and therefore per-instance — see §5. Covered by
   gate checks 33-37.
-- **Phase 6 — consultation client logins** must use the same `requireCoach()` assertion as
-  `createClientLogin`. ~~`verify-rls.mjs` must be extended to prove a consultation client can reach *only*
-  their own plan~~ — **done in Phase 4**, tests 27, 28 and 31: the script provisions a real consultation
-  account, asserts it reads one plan and no coaching data, and deletes it again. Phase 6 only has to add
-  the coach-side provisioning UI; the boundary it relies on is already proven.
+- ~~**Phase 6 — consultation client logins** must use the same `requireCoach()` assertion as
+  `createClientLogin`~~ — **done.** `createConsultationLogin` asserts `requireCoach()` before touching
+  the service role and rolls back each provisioning step on failure. The password is generated with
+  rejection-sampled `randomBytes` (~117 bits) and returned to the component rather than redirected
+  with, so it never enters a URL, history or a log. A unique index now stops two consultation records
+  sharing one auth user, which would have made `current_consultation_client_id()` serve the wrong
+  person's plan without erroring. Checks 41 and 42 cover the draft boundary and that index.
 - **Any new API route** starts with zero authentication. Add an explicit role check as its first line.
 - **Any new Server Action touching `createAdminClient()`** must call `requireCoach()` first. This is the
   easiest serious mistake to make in this codebase.

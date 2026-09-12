@@ -593,6 +593,49 @@ check(
   `sees ${(visibleConsults ?? []).length} row(s)`,
 );
 
+// --- the consultation client's draft boundary --------------------------------
+// Test 27 proves they see their PUBLISHED plan. Nothing proved the other half:
+// that a plan the coach is still building stays invisible to the person it is
+// being built for. Test 22 covers that for coaching clients only.
+const consultDraftId = await seedPlan({
+  ownerType: "consultation_client",
+  ownerId: consultRecord.id,
+  title: `Verify — consult draft ${planStamp}`,
+  published: false,
+});
+
+const { data: consultVisiblePlans } = await asConsult.from("plans").select("id");
+const consultDraftChildren = await planChildCounts(asConsult, consultDraftId);
+check(
+  "40. consultation client CANNOT read their own plan while it is a draft",
+  (consultVisiblePlans ?? []).every((p) => p.id !== consultDraftId) &&
+    Object.values(consultDraftChildren).every((n) => n === 0),
+  `sees ${(consultVisiblePlans ?? []).length} plan(s), ${JSON.stringify(consultDraftChildren)}`,
+);
+
+// current_consultation_client_id() returns a scalar. Two rows sharing one auth
+// user would make it pick one arbitrarily and serve the wrong person's plan,
+// silently — so the database has to refuse the second link.
+const { data: decoyConsult } = await admin
+  .from("consultation_clients")
+  .insert({ name: `Verify — decoy ${planStamp}` })
+  .select("id")
+  .single();
+const { error: dupLinkErr } = await admin
+  .from("consultation_clients")
+  .update({ auth_user_id: consultUser.user.id })
+  .eq("id", decoyConsult.id);
+const { data: decoyAfter } = await admin
+  .from("consultation_clients")
+  .select("auth_user_id")
+  .eq("id", decoyConsult.id)
+  .single();
+check(
+  "41. two consultation records CANNOT share one auth user",
+  dupLinkErr?.code === "23505" && decoyAfter.auth_user_id === null,
+  dupLinkErr ? `got ${dupLinkErr.code}` : "second link silently applied",
+);
+
 // --- cleanup: unlink before deleting, per the FK ------------------------------
 // Probe rows and objects go first: a leftover 2099 row collides with the unique
 // constraint on the next run and turns test 16 into a false failure.
@@ -602,7 +645,7 @@ await admin.from("plans").delete().in("id", created_plans);
 // The webhook probes write real rows through the real route. consultation_notes
 // cascades from consultation_clients, so the private note goes with the record.
 await admin.from("consultation_clients").delete().like("name", `Verify — intake ${intakeStamp}%`);
-await admin.from("consultation_clients").delete().eq("id", consultRecord.id);
+await admin.from("consultation_clients").delete().in("id", [consultRecord.id, decoyConsult.id]);
 await admin.from("profiles").delete().eq("id", consultUser.user.id);
 await admin.auth.admin.deleteUser(consultUser.user.id);
 await admin.from("clients").update(mineBefore).eq("id", mine.id);
@@ -615,7 +658,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "40. cleanup restored the client row to how it was found",
+  "42. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
