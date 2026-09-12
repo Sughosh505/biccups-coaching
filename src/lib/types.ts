@@ -83,3 +83,64 @@ export type Package = {
   sessions_remaining: number | null;
   price: number | null;
 };
+
+export type PlanOwnerType = "coaching_client" | "consultation_client";
+
+export type Plan = {
+  id: string;
+  owner_type: PlanOwnerType;
+  owner_id: string;
+  title: string | null;
+  /** Null until the coach publishes. RLS hides an unpublished plan from the client. */
+  published_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+/** Macros live here, not on the foods — DESIGN.md D-1. */
+export type PlanMealGroup = {
+  id: string;
+  plan_id: string;
+  name: string;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  sort_order: number;
+};
+
+export type PlanMeal = {
+  id: string;
+  plan_id: string;
+  group_id: string;
+  food_name: string;
+  sort_order: number;
+};
+
+export type PlanSupplement = {
+  id: string;
+  plan_id: string;
+  name: string;
+  brand: string | null;
+  dose: string | null;
+  /** Free text relative to an event — "1 hr before sleep". Never a clock time. */
+  timing: string | null;
+  sort_order: number;
+};
+
+export type PlanNotes = {
+  id: string;
+  plan_id: string;
+  /** Exactly seven entries, Mon→Sun, or null. DESIGN.md D-5. */
+  split_days: string[] | null;
+  general_notes: string | null;
+};
+
+export type MealGroupWithFoods = PlanMealGroup & { foods: PlanMeal[] };
+
+export type FullPlan = {
+  plan: Plan;
+  groups: MealGroupWithFoods[];
+  supplements: PlanSupplement[];
+  notes: PlanNotes | null;
+};
