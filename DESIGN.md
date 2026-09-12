@@ -178,14 +178,89 @@ The coach's own avatar uses `background: faintest; color: ink`.
 
 96×28 SVG, `polyline`, `stroke: #7A7A88`, width 1.5, round caps and joins. No fill, no axis, no dots.
 
-### Line chart (weight / "the cut")
+### Weight chart
 
-- Gridlines `--color-divider-soft` (phone) or `#1A1A20` (desktop hero), 1px.
-- Series: `stroke: accent`, width 2–2.5, round caps/joins.
+One component serves both sides — the coach's client Overview and the client's Progress screen. Header, range
+selector and plot are a single unit: the delta in the header is always the delta for the selected range.
+
+**The card title follows the goal**, never a fixed "The cut". `goal_weight` below current → `The cut`; above →
+`The build`; no goal set → `Body weight`. The trend-colour rule in §7 already forbids hard-coding down-is-good;
+the title obeys the same rule, or a lean-bulking client is told they are cutting.
+
+#### Plot geometry
+
+- **x is proportional to date, never to index.** `x = (date − rangeStart) / (rangeEnd − rangeStart) × plotWidth`.
+  Spacing points evenly by check-in misrepresents gaps and flatters the trend — this is a correctness rule, not a
+  style one.
+- `rangeEnd` is **today**, not the last logged day, so a client who stopped logging shows the trailing dead space
+  instead of a line that runs confidently to the right edge.
+- `rangeStart` for `All` is the earlier of `start_date` and the first logged weight — the same anchor
+  `groupIntoWeeks` uses, so "Week 3" and the chart agree about when coaching began.
+- Left gutter for y labels: 34px desktop, 30px phone. Plot height 200px desktop, 146px phone.
+
+#### Y domain
+
+- min/max of the weights **in range**, including `goal_weight` only when the goal-line rule in §7 admits it.
+- Pad the span 8% top and bottom, then round outward to the nearest 0.5 kg.
+- **Minimum span 2 kg.** Without a floor, a client who held within 0.3 kg for a month gets a dramatic mountain
+  range built entirely out of scale noise.
+- 3 interior gridlines at 0.25 / 0.5 / 0.75 of the plot height, `--color-divider-soft` (phone) or
+  `--color-surface-3` (desktop), 1px, each **labelled** in the left gutter: mono 10px, `--color-muted-2`, no unit
+  suffix — the header carries `kg`.
+
+#### Series
+
+- **Raw daily weight. No smoothing, no rolling average** — the day-to-day noise is the texture that makes the
+  zoom-out land.
+- Line: `stroke: accent`, width 2.2, round caps and joins.
 - Area under the line: `fill: accent; fill-opacity: 0.12` (phone) / `0.14` (desktop).
-- Goal line: `stroke: --color-faint`, width 1.5, `stroke-dasharray="5 4"`.
-- Latest point: filled accent circle, r 4–5.
-- Axis labels: mono, 10–11px, muted-2.
+- **Interpolated gaps are dimmed.** Any segment spanning more than 7 days with no logged weight draws at
+  `stroke-opacity: 0.35` and contributes no area fill. §7's "never a silent gap" applies to charts too: a clean
+  straight line across three unlogged weeks reads as steady progress that was never actually measured.
+- Latest point: filled accent circle, r 4.5 desktop / 4 phone.
+- X labels: mono 10px, `--color-muted-2`, at most 5, first and last always drawn. `1M` labels weekly as `12 Sep`;
+  `3M` / `6M` / `All` label by month as `Sep`.
+
+#### Goal line
+
+`stroke: --color-faint`, width 1.5, `stroke-dasharray="5 4"` — drawn **only when the goal falls inside the padded
+y-domain**. Outside it the goal becomes an edge label and never widens the domain; see §7.
+
+#### Range selector
+
+The windows are fixed: **`1M · 3M · 6M · All`**. Never 1Y / 2Y / 3Y — no client's history fills them — and no
+month paginator; the windows replace it.
+
+- A window longer than the client's history is **not rendered at all**, not rendered disabled. `All` is always
+  present, so a six-week client sees `1M · All`.
+- Desktop — chips, right-aligned in the card header: 26px tall, `padding: 0 10px`, radius 7px, mono 11px.
+  Active: accent 12% fill, accent 32% border, accent text. Inactive: `surface`, `border`, `--color-muted-2`.
+- Phone — a **4-column segmented control above the plot, 44px tall**, gap 6px, radius 10px, same fills. Chips at
+  desktop height would sit under §8's touch floor, so this reuses the Segmented Yes/No geometry instead.
+- Each option is a real `button` carrying `aria-pressed`.
+
+#### Header delta
+
+The selected range's own delta, recomputed on every change. This is the point of the whole component.
+
+Value in mono 14px/500 — `−12.40 kg` — toned by **`weightTrendTone` against the goal**, never by sign. Beneath it
+in `--color-muted-2` 11.5px: `last 30 days` / `last 3 months` / `last 6 months` / `since 12 May`.
+
+The delta is last-in-range minus first-in-range. It is **not** latest minus `start_weight` — that number already
+lives in the Overview stat tile and does not move when the range does.
+
+#### Interaction
+
+The chart is the one client component on these two screens. The full series is fetched server-side and passed
+down whole, so changing range filters in memory and refetches nothing.
+
+- Desktop: hover draws a 1px `--color-border-strong` crosshair at the nearest point, an accent dot r 3.5, and a
+  readout — `surface-2`, 1px `border`, radius 6px, `padding: 6px 9px`, date 11px `--color-muted-2` above weight
+  in mono 13px ink.
+- Phone: **no scrub.** Touch-drag across a 146px plot fights page scroll. The latest point and the header delta
+  carry the reading.
+- The SVG keeps `role="img"`, and its `aria-label` restates range, point count, latest weight and delta, updating
+  with the range.
 
 ### Slider (1–10 scales)
 
@@ -304,6 +379,26 @@ These are logic, not decoration. Implement them exactly.
 Moving toward `goal_weight` → accent. Moving away → alert. Flat (< 0.05 kg) → muted-2.
 A client bulking (goal above current) going *up* is accent. Never hard-code "down is good".
 
+**The weight chart's x-axis is time, not sequence.** Points are placed by date across the selected range. Never
+space them evenly by check-in — a three-week gap drawn as one ordinary step makes an unmeasured stretch look like
+steady progress. Full geometry in §4.
+
+**The goal line renders only inside the domain.** If `goal_weight` falls outside the padded y-domain of the
+selected range, do not draw the line and do not stretch the domain to reach it. Draw an edge label instead —
+`Goal 72.0 ↓` in `--color-faint`, mono 10px, at the bottom of the plot when the goal is below the data and the
+top when above. A client 12 kg from goal viewing `1M` otherwise gets a month of real movement compressed into a
+flat ribbon.
+
+**Default chart range** is `All` when the client's history is under 90 days, `3M` otherwise. Never auto-change it
+afterwards — a range selector that moves under the user is worse than an empty frame.
+
+**A range holding fewer than two weights is not an empty state.** Keep the axes, gridlines and range selector
+drawn, and centre one line of `--color-muted` 12.5px in the plot: *"No weights logged in this range."* The full
+EmptyState is only for a client with fewer than two weights in their entire history.
+
+**The weight chart's card title follows the goal** — `The cut` below, `The build` above, `Body weight` when no
+goal is set. Same reason as the trend colour.
+
 **Compliance thresholds** — `% of days with a check-in since start_date`:
 `≥ 85%` accent · `60–84%` warn · `< 60%` alert.
 
@@ -354,6 +449,11 @@ Never a silent gap.
 | — | Clients see: cut/trend, compliance %, measurements, progress photos. |
 | — | Clients **never** see form-check notes. Coach-only, already enforced in RLS. |
 | — | Supplements in the plan view are grouped **by timing**, not by product. |
+| — | Weight chart x-axis is **date-proportional**. Index spacing is a correctness bug, not a style choice. |
+| — | Weight chart shows **raw daily weight only** — no rolling average, no smoothing. |
+| — | Chart ranges are **1M · 3M · 6M · All**. No year windows, no month paginator. |
+| — | Weights reach the chart **only** through client check-ins. The coach never adds one directly — it would fabricate a logged day and inflate compliance %. |
+| — | No share or export of a client's chart. Revisit only with a consent flow recorded in `docs/production-readiness.md` §6 first; this is health data about a named person. |
 
 ---
 
@@ -376,6 +476,10 @@ Never a silent gap.
 - Build the §4 components as shared React components first. Screens compose them; screens do not re-style them.
 - ~~Recharts is the charting library per the stack~~ — **changed in Phase 3.** The weight chart, sparkline
   and week squares are hand-rolled inline SVG in `src/components/ui/index.tsx`. The §4 specs are the
-  implementation directly rather than a target to configure a library towards, the charts stay server
-  components with no client JS, and no dependency was added. Recharts remains a reasonable choice if a
+  implementation directly rather than a target to configure a library towards, no dependency was added, and the
+  sparkline and week squares stay server components with no client JS. Recharts remains a reasonable choice if a
   later phase needs tooltips or brushing; until then, do not add it for a chart this file already specifies.
+- The **weight chart is the one client component** on the coach Overview and client Progress screens — the
+  range selector and the desktop hover readout need JS. The series is fetched server-side and passed down
+  whole, so switching range filters in memory and never refetches. Everything around it stays a server
+  component; do not let "use client" spread up into the page.

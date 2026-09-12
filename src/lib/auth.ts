@@ -57,9 +57,13 @@ export async function requireClient(): Promise<ClientActor> {
     .eq("auth_user_id", actor.userId)
     .single();
 
-  // A profile with no linked client row is a half-finished provisioning, not a
-  // login. Fail closed rather than rendering an empty shell.
-  if (!client) redirect("/login?error=forbidden");
+  // A coaching_client profile with no clients row is a half-finished provisioning.
+  // Sign out before redirecting: the proxy sends an authenticated coaching_client
+  // straight back to /client, so redirecting while still signed in loops forever.
+  if (!client) {
+    await supabase.auth.signOut();
+    redirect("/login?error=unlinked");
+  }
 
   return { ...actor, clientId: client.id, client: client as Client };
 }

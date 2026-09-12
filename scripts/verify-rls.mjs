@@ -39,12 +39,19 @@ function cookieFor(session) {
 
 const { data: clients } = await admin
   .from("clients")
-  .select("id, name")
+  .select("id, name, email, auth_user_id")
   .like("name", "Demo — %")
   .order("name");
 
-const mine = clients[0];
-const theirs = clients[1];
+// Prefer demo clients that have no login, so a real coach-provisioned account is
+// never hijacked for the duration of the run.
+const unlinked = clients.filter((c) => !c.auth_user_id);
+const mine = unlinked[0] ?? clients[0];
+const theirs = (unlinked[1] ?? clients.find((c) => c.id !== mine.id));
+
+// Snapshot whatever we are about to overwrite. Cleanup used to null these outright,
+// which silently detached an existing client login and left them in a redirect loop.
+const mineBefore = { auth_user_id: mine.auth_user_id, email: mine.email };
 const email = `verify-client-${Date.now()}@example.com`;
 
 // --- the exact sequence createClientLogin() performs -------------------------
@@ -257,12 +264,20 @@ check(
 // constraint on the next run and turns test 16 into a false failure.
 await admin.from("daily_checkins").delete().in("date", [PROBE_OWN_DATE, PROBE_CROSS_DATE]);
 await admin.storage.from(BUCKET).remove([ownPath, theirPath]);
-await admin.from("clients").update({ auth_user_id: null }).eq("id", mine.id);
+await admin.from("clients").update(mineBefore).eq("id", mine.id);
 await admin.from("profiles").delete().eq("id", created.user.id);
 await admin.auth.admin.deleteUser(created.user.id);
 
-const { data: after } = await admin.from("clients").select("auth_user_id").eq("id", mine.id).single();
-check("23. cleanup unlinked the client", after.auth_user_id === null);
+const { data: after } = await admin
+  .from("clients")
+  .select("auth_user_id, email")
+  .eq("id", mine.id)
+  .single();
+check(
+  "23. cleanup restored the client row to how it was found",
+  after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
+  `auth_user_id ${after.auth_user_id}, email ${after.email}`,
+);
 
 console.log(`\n--- ${pass} passed, ${fail} failed ---`);
 if (fail > 0) process.exit(1);
