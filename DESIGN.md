@@ -262,6 +262,104 @@ down whole, so changing range filters in memory and refetches nothing.
 - The SVG keeps `role="img"`, and its `aria-label` restates range, point count, latest weight and delta, updating
   with the range.
 
+### Daily target (plan view) — added in Phase 4
+
+Top card of the plan view. `padding: 18px 16px`, column, gap 16px:
+`.sec` label → mono 38px/500 total kcal with `kcal` 15px `--color-muted-2` → macro bar → 3-column legend.
+
+- **Macro bar**: `height: 8px; radius: 5px; gap: 2px; overflow: hidden`. Three segments — protein `accent`,
+  carbs `info`, fat `warn`. Segments are sized by **share of calories, not share of grams** (protein ×4,
+  carbs ×4, fat ×9). Grams would draw 39 g of fat as a 7% sliver when it is really 14% of the day's energy.
+- **Legend**: 3 equal columns. Each is a 7px square (`border-radius: 2px`) in the segment's colour + 12px
+  `--color-muted` name, above a mono 17px/500 value with its `g` in 12px `--color-muted-2`.
+- Totals are **summed from the meal groups and never stored** — see §7.
+
+### Meal group card (plan view) — added in Phase 4
+
+One Card per meal group, `overflow: hidden`:
+
+- **Header** — `padding: 13px 16px; background: surface-2; border-bottom: 1px solid divider`.
+  Group name 14px/600 `ink` left; group calories mono 15px/500 `accent` + `kcal` 11.5px `--color-muted-2` right.
+- **Foods** — `padding: 6px 16px 10px`. Each food is a row, `padding: 9px 0`,
+  `border-bottom: 1px solid divider-soft`, holding a 5px `--color-border-strong` dot and the name in 14px `ink-2`.
+  **Foods carry no numbers** (D-1).
+- **Footer** — `padding: 11px 16px; background: sunken`, gap 18px: `P` `C` `F` in mono 12px `--color-muted`
+  with each value in `ink-2`. A macro the coach left blank renders `—`, never `0`.
+
+### Supplement group card (plan view) — added in Phase 4
+
+One Card per **timing**, not per product (locked in §9).
+
+- **Header** — `padding: 12px 16px; border-bottom: 1px solid divider`, gap 9px: a 15px clock icon in `accent`
+  and the timing text in 13.5px/500 `ink`.
+- **Rows** — `padding: 4px 16px 10px` container; each row `padding: 10px 0`,
+  `border-bottom: 1px solid divider-soft`, name 14px `ink` above brand 11.5px `--color-muted-2` on the left,
+  dose mono 13px `ink-2` right-aligned.
+
+### Training week (plan view) — added in Phase 4
+
+Seven rows in one Card, `padding: 6px 16px 10px`, one row per day Mon→Sun: `padding: 11px 0`,
+`border-bottom: 1px solid divider-soft` (none on the last), gap 12px:
+day name mono 11px `--color-muted-2` in a fixed 38px column → 7px square (`radius: 2px`) in the day's colour →
+label 14px `ink-2`.
+
+> This **replaces the letter squares in `ClientPlan.dc.html`**. That artboard drew 38×44 tiles holding a single
+> letter because the split was one `ULRULUR` string. Day labels are now free text (D-5) and `Shoulders` does not
+> fit a 38px tile; abbreviating it back down to a letter reintroduces the collision (`Push` / `Pull`) the free
+> text was chosen to avoid. The legend disappears with the squares — each row already carries its own label.
+
+Day colours are **assigned, never authored** — see §7. A rest day's square is `--color-divider-faint` and its
+label `--color-muted-2`.
+
+#### Lyfta link — added in Phase 4
+
+Beneath the week card, inside the same `Training split` section: a full-width **Primary** button, 54px,
+radius 12px, label **Open workout in Lyfta** with a 17px external-link icon at 2.0 stroke.
+
+This is the one outbound action on the plan and the only Primary button on any client plan screen, so it
+takes accent. It renders **only when the coach has set a link**, and it survives on its own: a plan with a
+link but no split still shows the section, with the button and no week card.
+
+The anchor carries `target="_blank"` and `rel="noopener noreferrer"` — noopener stops the opened tab
+reaching back through `window.opener`, noreferrer keeps the client's plan URL out of Lyfta's referer log.
+
+### Plan builder (coach, desktop) — added in Phase 4
+
+Two columns: a main column of Cards and a **sticky 260px right rail**, gap 16px, rail `position: sticky; top: 26px`.
+Per §8 the main column comes first in document order. The rail drops below the main column under 1280px.
+
+Cards, in this order, each a §4 Form card:
+
+1. **Meals** — per group: a header row of a name input (36px, flex 1) and four 36px numeric inputs
+   (`kcal` `g` `g` `g` as fixed suffixes), then one 36px input per food each with a trailing 36px ✕ button
+   in `--color-muted-2` that goes `--color-alert` on hover, then a ghost `+ Add food`. Every remove control is
+   a 36px square so it clears the §8 desktop floor. Groups are separated by `1px solid divider`.
+   A ghost `+ Add meal group` closes the card.
+2. **Supplements** — a 4-column grid of 36px inputs (Name\*, Brand, Dose, Timing) with a trailing ✕,
+   then ghost `+ Add supplement`. Timing is free text — never a time picker; the coach writes
+   "1 hr before sleep".
+3. **Training split** — seven rows, day name 12.5px `ink-2` in a 44px column beside a 36px text input
+   whose placeholder is `Rest`. Below them, separated by a `divider` rule, a full-width 36px **Lyfta
+   workout link** field, placeholder `https://lyfta.app/…`, with an 11.5px `--color-muted-2` caption
+   stating that it must be a full `https://` address.
+4. **Notes** — a TextareaField, 5 rows.
+
+**Rail** — a Card, `padding: 14px 16px`: `.lbl` `Daily total` → mono 25px/500 kcal → a P/C/F list, each row a
+7px legend square + 12px `--color-muted` name + mono 13px `ink-2` value. It recomputes on every keystroke and
+is the only live-updating thing on the screen; it is what the client will see, shown while the coach builds.
+When some group is missing macros it says so in `--color-warn`, matching the client-side rule in §7.
+
+**Saving and publishing are separate controls, deliberately.** Saving is a form submit and belongs under the
+form: one primary button below the last card, labelled `Save draft` before publication and `Save changes`
+after, with a line of `--color-muted-2` beside it saying who can currently see the plan. Publishing is a
+state change, not an edit, so it sits in the page header next to the Draft/Live chip — primary `Publish plan`
+on a draft, secondary `Unpublish` once live, beside a secondary `Preview` linking to the client render. A
+coach fixing a typo on a live plan must not have to re-publish it, and a half-built draft must not be one
+mis-click from the client screen.
+
+`Delete this plan` is a ghost action alone below a `divider` rule at the foot of the page — never adjacent to
+Save.
+
 ### Slider (1–10 scales)
 
 Row is **44px tall**. Track 6px, radius 4px, `background: divider-faint`. Fill accent. Thumb 26px circle, accent,
@@ -373,7 +471,12 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/coach/clients/[id]` | coach | Client detail — Overview tab | `ClientOverview.dc.html` |
 | `/coach/clients/[id]/edit` | coach | Edit client | derived — §4 Form |
 | `/coach/clients/[id]/checkins` | coach | Client detail — Check-ins tab | `ClientCheckins.dc.html` |
+| `/coach/clients/[id]/diet` | coach | Client detail — Diet & supplements tab | `ClientPlan.dc.html` |
 | `/coach/consultations/[id]` | coach | Consultation review | `ConsultationReview.dc.html` |
+| `/coach/plans` | coach | Plans list | derived — §4 Table |
+| `/coach/plans/new` | coach | New plan — pick the client it belongs to | derived — §4 Form |
+| `/coach/plans/[id]` | coach | Plan builder | derived — §4 Plan builder |
+| `/coach/plans/[id]/preview` | coach | The client's own plan view, read-only | `ClientPlan.dc.html` |
 | `/client` | coaching_client | Today — check-in, or done state | `ClientCheckin.dc.html`, `ClientHome.dc.html` |
 | `/client/progress` | coaching_client | Cut, compliance, measurements, photos | *within* `ClientHome.dc.html` |
 | `/client/plan` | coaching_client | Plan, read-only | `ClientPlan.dc.html` |
@@ -434,6 +537,32 @@ Never a silent gap.
 
 ---
 
+**Daily target totals are derived, never stored.** Sum the meal groups' `calories` / `protein` / `carbs` / `fat`.
+A group with a blank macro contributes nothing, so when at least one group is incomplete the Daily target card
+appends `n of m meals have macros` in `--color-warn` 11.5px beneath the bar. A total that reads low must say why
+it reads low.
+
+**A plan is a draft until the coach publishes it.** Clients never see an unpublished plan — enforced in RLS, not
+in the UI, so a guessed URL fails too. On the coach side an unpublished plan carries a `Draft` warn chip
+everywhere it is listed; a published one carries `Live` in accent.
+
+**Split day colours are assigned, not authored.** Walk Mon→Sun; each new distinct label takes the next colour
+from the fixed sequence `accent → info → warn`, cycling if a split has more than three kinds of day. A day
+labelled `Rest` (any case) or left blank is always `--color-divider-faint` / `--color-muted-2` and never consumes
+a colour. The coach picks words, never colours — nothing in the builder offers a colour control.
+
+**The plan's Lyfta link is https-only, and a bad one fails the save.** It is refused in the server action
+and again by a database check constraint — a `javascript:` or `data:` URL reaching an `href` is the actual
+attack, and one layer of validation is one edit away from none. The host is deliberately unrestricted. A
+rejected link does not save silently: the whole save is refused with a message naming the link, because a
+coach who sees the plan save cleanly will assume the client got it.
+
+**Supplements group by timing, in first-appearance order.** Walk the coach's own ordering; each new timing string
+opens a group. Supplements with no timing fall into a final group labelled `Any time` rather than being dropped.
+
+**An unpublished or absent plan is an EmptyState, not a blank screen.** The client plan view says what will
+appear there and who puts it there, per §4 EmptyState.
+
 ## 8. Accessibility
 
 - Every interactive control is **≥ 44px** on its smallest dimension on phone. Desktop rows are ≥ 36px.
@@ -471,13 +600,17 @@ Never a silent gap.
 | — | No share or export of a client's chart. Revisit only with a consent flow recorded in `docs/production-readiness.md` §5 first; this is health data about a named person. |
 
 ---
+| D-5 | Split days are **seven free-text labels**, one per day — not one `ULRULUR` string. Supersedes the letter squares in `ClientPlan.dc.html`; see §4 Training week. |
+| D-6 | A plan is a **draft until published**, hidden from the client by RLS until then. |
+| — | Plan macros live on the **meal group** (`plan_meal_groups`), foods carry no numbers. This is D-1 implemented. |
+| — | The plan view at desktop width is the **same single column, centred at the 430px client-shell cap** — not a second layout. Client screens are phone-first and scale up; a plan is a document, and a document does not want to be 1400px wide. |
+| D-7 | The plan carries **one Lyfta programme link**, not one per training day. It is a different field from `daily_checkins.lyfta_link`: the plan link is the coach handing over the programme, the check-in link is the client logging the session they did. |
+| — | Plan totals are computed from the groups and never written to the database. Two places to change one number is how the sheet's totals went stale. |
 
 ## 10. Not yet designed — ask before building
 
 - Login screen
-- Plan builder (coach, Phase 4)
-- Client detail tabs: Diet & supplements, Workouts, Progress
-- Plan view at desktop width
+- Client detail tabs: Workouts, Progress
 - Reports (Phase 8)
 - Loading skeletons and toast states (empty and inline error states are now specced in §4)
 - Print stylesheet for the plan view — near-black is expensive on paper; likely a light print sheet for that one
@@ -486,8 +619,10 @@ Never a silent gap.
 ## 11. Implementation notes
 
 - ~~Fix the `body { font-family: Arial }` override in `globals.css`~~ — done in Phase 2.
-- Per-meal-group macros (D-1) will need a small `plan_meals` schema decision in Phase 4 — where the group total
-  lives. Raise it before writing the migration; **do not change the schema without asking.**
+- ~~Per-meal-group macros (D-1) will need a small `plan_meals` schema decision in Phase 4~~ — **settled in
+  Phase 4.** The group total lives on a new `plan_meal_groups` row and `plan_meals` is foods only, joined by a
+  composite `(group_id, plan_id)` foreign key so a food can never point at another plan's group. `plan_notes`
+  swapped its single `training_split` string for a seven-element `split_days text[]` (D-5).
 - Build the §4 components as shared React components first. Screens compose them; screens do not re-style them.
 - ~~Recharts is the charting library per the stack~~ — **changed in Phase 3.** The weight chart, sparkline
   and week squares are hand-rolled inline SVG in `src/components/ui/index.tsx`. The §4 specs are the

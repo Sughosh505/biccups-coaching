@@ -236,11 +236,195 @@ check(
   `status ${rawObject.status}`,
 );
 
+// --- plans: the Phase 4 data boundary ----------------------------------------
+// Two things have to hold: a client never sees another client's plan, and nobody
+// sees a plan that has not been published. Both are RLS, so both are tested by
+// asking the database directly rather than by loading a page.
+const planStamp = Date.now();
+const created_plans = [];
+
+async function seedPlan({ ownerType, ownerId, title, published }) {
+  const { data: plan } = await admin
+    .from("plans")
+    .insert({
+      owner_type: ownerType,
+      owner_id: ownerId,
+      title,
+      published_at: published ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
+  created_plans.push(plan.id);
+
+  const { data: group } = await admin
+    .from("plan_meal_groups")
+    .insert({
+      plan_id: plan.id,
+      name: "Breakfast",
+      calories: 600,
+      protein: 40,
+      carbs: 60,
+      fat: 15,
+      sort_order: 0,
+    })
+    .select("id")
+    .single();
+
+  await admin
+    .from("plan_meals")
+    .insert({ plan_id: plan.id, group_id: group.id, food_name: "Eggs x3", sort_order: 0 });
+  await admin
+    .from("plan_supplements")
+    .insert({ plan_id: plan.id, name: "Creatine", dose: "5 g", timing: "Breakfast", sort_order: 0 });
+  await admin.from("plan_notes").insert({
+    plan_id: plan.id,
+    split_days: ["Upper", "Lower", "Rest", "Upper", "Lower", "Upper", "Rest"],
+    general_notes: `verify ${planStamp}`,
+  });
+
+  return plan.id;
+}
+
+const theirPlanId = await seedPlan({
+  ownerType: "coaching_client",
+  ownerId: theirs.id,
+  title: `Verify — theirs ${planStamp}`,
+  published: true,
+});
+const myPlanId = await seedPlan({
+  ownerType: "coaching_client",
+  ownerId: mine.id,
+  title: `Verify — mine ${planStamp}`,
+  published: false,
+});
+
+const { data: visiblePlans } = await asClient.from("plans").select("id");
+const visibleIds = new Set((visiblePlans ?? []).map((p) => p.id));
+check(
+  "21. client CANNOT read another client's published plan",
+  !visibleIds.has(theirPlanId),
+  `sees ${visibleIds.size} plan(s)`,
+);
+check(
+  "22. client CANNOT read their own UNPUBLISHED plan",
+  !visibleIds.has(myPlanId),
+  "a draft is visible to the client",
+);
+
+async function planChildCounts(client, planId) {
+  const tables = ["plan_meal_groups", "plan_meals", "plan_supplements", "plan_notes"];
+  const counts = {};
+  for (const table of tables) {
+    const { data } = await client.from(table).select("id").eq("plan_id", planId);
+    counts[table] = data?.length ?? 0;
+  }
+  return counts;
+}
+
+const crossChildren = await planChildCounts(asClient, theirPlanId);
+check(
+  "23. client CANNOT read another plan's meals, supplements or notes",
+  Object.values(crossChildren).every((n) => n === 0),
+  JSON.stringify(crossChildren),
+);
+
+const draftChildren = await planChildCounts(asClient, myPlanId);
+check(
+  "24. client CANNOT read the contents of their own draft plan",
+  Object.values(draftChildren).every((n) => n === 0),
+  JSON.stringify(draftChildren),
+);
+
+// Publishing is the only thing that should change the answer.
+await admin
+  .from("plans")
+  .update({ published_at: new Date().toISOString() })
+  .eq("id", myPlanId);
+
+const { data: nowVisible } = await asClient.from("plans").select("id").eq("id", myPlanId);
+const publishedChildren = await planChildCounts(asClient, myPlanId);
+check(
+  "25. client CAN read their own plan once it is published",
+  (nowVisible?.length ?? 0) === 1 && Object.values(publishedChildren).every((n) => n === 1),
+  JSON.stringify(publishedChildren),
+);
+
+// Reading a published plan must not imply writing to it.
+await asClient.from("plans").update({ title: "hijacked" }).eq("id", myPlanId);
+const { data: titleAfter } = await admin
+  .from("plans")
+  .select("title")
+  .eq("id", myPlanId)
+  .single();
+await asClient.from("plan_meal_groups").insert({ plan_id: myPlanId, name: "Injected" });
+const { data: injected } = await admin
+  .from("plan_meal_groups")
+  .select("id")
+  .eq("plan_id", myPlanId)
+  .eq("name", "Injected");
+check(
+  "26. client CANNOT edit their own plan (read-only, coach writes)",
+  titleAfter.title === `Verify — mine ${planStamp}` && (injected?.length ?? 0) === 0,
+  `title "${titleAfter.title}", ${injected?.length ?? 0} injected row(s)`,
+);
+
+// --- the consultation client: one plan, and nothing else ---------------------
+const consultEmail = `verify-consult-${planStamp}@example.com`;
+const { data: consultUser } = await admin.auth.admin.createUser({
+  email: consultEmail,
+  password: PASSWORD,
+  email_confirm: true,
+});
+await admin
+  .from("profiles")
+  .insert({ id: consultUser.user.id, role: "consultation_client", display_name: "Verify Consult" });
+const { data: consultRecord } = await admin
+  .from("consultation_clients")
+  .insert({
+    name: `Verify — consultation ${planStamp}`,
+    email: consultEmail,
+    auth_user_id: consultUser.user.id,
+  })
+  .select("id")
+  .single();
+const consultPlanId = await seedPlan({
+  ownerType: "consultation_client",
+  ownerId: consultRecord.id,
+  title: `Verify — consult ${planStamp}`,
+  published: true,
+});
+
+const asConsult = createClient(URL_, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const { data: consultSession } = await asConsult.auth.signInWithPassword({
+  email: consultEmail,
+  password: PASSWORD,
+});
+
+const { data: consultPlans } = await asConsult.from("plans").select("id");
+check(
+  "27. consultation client reads ONLY their own plan",
+  (consultPlans ?? []).length === 1 && consultPlans[0].id === consultPlanId,
+  `sees ${(consultPlans ?? []).length} plan(s)`,
+);
+
+const consultLeakage = {};
+for (const table of ["clients", "daily_checkins", "measurements", "progress_photos", "form_checks"]) {
+  const { data } = await asConsult.from(table).select("*").limit(5);
+  consultLeakage[table] = data?.length ?? 0;
+}
+const consultCross = await planChildCounts(asConsult, theirPlanId);
+check(
+  "28. consultation client CANNOT read any coaching data",
+  Object.values(consultLeakage).every((n) => n === 0) &&
+    Object.values(consultCross).every((n) => n === 0),
+  JSON.stringify({ ...consultLeakage, crossPlan: consultCross }),
+);
+
 // --- routing, as that client -------------------------------------------------
 const cookie = cookieFor(session.session);
 const coachArea = await fetch(`${BASE}/coach`, { headers: { cookie }, redirect: "manual" });
 check(
-  "21. client is bounced out of /coach",
+  "29. client is bounced out of /coach",
   coachArea.status === 307 && (coachArea.headers.get("location") ?? "").includes("/client"),
   `status ${coachArea.status}`,
 );
@@ -254,9 +438,47 @@ for (const route of clientRoutes) {
   clientStatuses.push(`${route} ${res.status}`);
 }
 check(
-  "22. client can reach every /client route",
+  "30. client can reach every /client route",
   clientStatuses.every((entry) => entry.endsWith(" 200")),
   clientStatuses.join(", "),
+);
+
+// The consultation client's whole app is /plan; everything else must bounce.
+const consultCookie = cookieFor(consultSession.session);
+const consultRoutes = {};
+for (const route of ["/plan", "/client", "/coach"]) {
+  const res = await fetch(`${BASE}${route}`, {
+    headers: { cookie: consultCookie },
+    redirect: "manual",
+  });
+  consultRoutes[route] = `${res.status} ${res.headers.get("location") ?? ""}`.trim();
+}
+check(
+  "31. consultation client reaches /plan and is bounced everywhere else",
+  consultRoutes["/plan"] === "200" &&
+    consultRoutes["/client"].startsWith("307") &&
+    consultRoutes["/coach"].startsWith("307"),
+  JSON.stringify(consultRoutes),
+);
+
+
+// The plan Lyfta link is rendered as an href the client taps. The server action
+// refuses anything but https; this proves the database refuses it too, so the
+// rule survives someone editing the action.
+const badLinks = ["javascript:alert(1)", "data:text/html,<script>1</script>", "http://lyfta.app/p/1"];
+const accepted = [];
+for (const link of badLinks) {
+  const { error } = await admin.from("plan_notes").update({ lyfta_link: link }).eq("plan_id", myPlanId);
+  if (!error) accepted.push(link);
+}
+const { error: goodLink } = await admin
+  .from("plan_notes")
+  .update({ lyfta_link: "https://lyfta.app/p/abc123" })
+  .eq("plan_id", myPlanId);
+check(
+  "32. database refuses a non-https Lyfta link, even from the service role",
+  accepted.length === 0 && !goodLink,
+  accepted.length ? `accepted ${accepted.join(", ")}` : goodLink?.message,
 );
 
 // --- cleanup: unlink before deleting, per the FK ------------------------------
@@ -264,6 +486,10 @@ check(
 // constraint on the next run and turns test 16 into a false failure.
 await admin.from("daily_checkins").delete().in("date", [PROBE_OWN_DATE, PROBE_CROSS_DATE]);
 await admin.storage.from(BUCKET).remove([ownPath, theirPath]);
+await admin.from("plans").delete().in("id", created_plans);
+await admin.from("consultation_clients").delete().eq("id", consultRecord.id);
+await admin.from("profiles").delete().eq("id", consultUser.user.id);
+await admin.auth.admin.deleteUser(consultUser.user.id);
 await admin.from("clients").update(mineBefore).eq("id", mine.id);
 await admin.from("profiles").delete().eq("id", created.user.id);
 await admin.auth.admin.deleteUser(created.user.id);
@@ -274,7 +500,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "23. cleanup restored the client row to how it was found",
+  "33. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
