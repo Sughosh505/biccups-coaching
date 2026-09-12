@@ -112,18 +112,45 @@ if (signUp?.user) {
 }
 
 // ------------------------------------------------- 7. password policy
-console.log("\n[7] Password policy");
-const weakEmail = `audit.weak.${Date.now()}@biccups-audit.dev`;
-const { data: weak, error: weakErr } = await admin.auth.admin.createUser({
-  email: weakEmail,
-  password: "123456",
+// The admin API bypasses the password policy entirely, so creating a weak user
+// with the service key proves nothing. Test the USER-FACING path instead: make a
+// user, sign in as them, and try to weaken their own password.
+console.log("\n[7] Password policy (user-facing path)");
+const pwEmail = `audit.pw.${Date.now()}@biccups-audit.dev`;
+const strong = "Audit-Strong-Password-9931";
+const { data: pwUser, error: pwCreateErr } = await admin.auth.admin.createUser({
+  email: pwEmail,
+  password: strong,
   email_confirm: true,
 });
-if (weak?.user) {
-  issue("MED", "A 6-character password was accepted", "Raise minimum length and enable leaked-password protection.");
-  await admin.auth.admin.deleteUser(weak.user.id).catch(() => {});
+
+if (pwCreateErr || !pwUser?.user) {
+  console.log(`  skip  could not create a probe user: ${pwCreateErr?.message}`);
 } else {
-  ok(`weak password rejected: ${weakErr?.message}`);
+  const asUser = createClient(URL_, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const { error: pwSignInErr } = await asUser.auth.signInWithPassword({
+    email: pwEmail,
+    password: strong,
+  });
+
+  if (pwSignInErr) {
+    console.log(`  skip  probe user could not sign in: ${pwSignInErr.message}`);
+  } else {
+    const { error: weakErr } = await asUser.auth.updateUser({ password: "123456" });
+    if (weakErr) ok(`6-character password rejected: ${weakErr.message}`);
+    else issue("MED", "A user can set a 6-character password", "Raise the minimum length in Supabase Auth settings.");
+
+    const { error: pwnedErr } = await asUser.auth.updateUser({ password: "Password123!" });
+    if (pwnedErr) ok(`known-breached password rejected: ${pwnedErr.message}`);
+    else
+      issue(
+        "MED",
+        "A known-breached password was accepted",
+        "Enable 'Prevent use of leaked passwords'. Note it requires the Pro plan — on the free tier the " +
+          "toggle can appear on without being enforced.",
+      );
+  }
+  await admin.auth.admin.deleteUser(pwUser.user.id).catch(() => {});
 }
 
 // ------------------------------------------------------- 8. demo data

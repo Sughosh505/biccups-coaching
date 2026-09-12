@@ -103,7 +103,11 @@ export async function createClientLogin(clientId: string, form: FormData) {
   const password = text(form, "login_password");
 
   if (!email || !password) fail("Email and password are both required.");
-  if (password.length < 8) fail("Password must be at least 8 characters.");
+
+  // createUser() goes through the admin API, which bypasses the project's password
+  // policy entirely — this check is the ONLY thing enforcing strength here, so it
+  // must match (or beat) the dashboard setting.
+  if (password.length < 10) fail("Password must be at least 10 characters.");
 
   const supabase = await createClient();
   const { data: client } = await supabase
