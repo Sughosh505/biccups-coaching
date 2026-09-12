@@ -9,18 +9,25 @@ node scripts/verify-rls.mjs       # client isolation + role routing, end to end
 
 ---
 
-## 1. The biggest structural risk right now
+## 1. Dev and prod are separate projects
 
-**One Supabase project is serving development and will serve production.** The demo clients I seeded
-are sitting in the database that will hold real client health data, and every experiment so far has run
-against it.
+**Decided:** the current Supabase project (`gjzchwgfvncxyfdjnurx`) is **development, permanently**. A
+**brand-new project is created at ship time** and only ever holds production data.
 
-Recommended before launch: create a **second Supabase project** for development, point `.env.local` at
-that, and keep the current project for production only. It is free, and it means a bad migration or a
-stray `--clean` can never touch real data. If you keep one project, treat every script run as
-production-affecting.
+This means production starts clean — no demo clients, no probe accounts, no half-applied settings, no
+accumulated experiments. It also means nothing needs migrating today.
 
-Either way: **`node scripts/seed-demo.mjs --clean` before you launch.**
+**The discipline this requires:** every schema change goes into a file in `supabase/migrations/`, never
+clicked into the Table Editor. The plan depends on rebuilding the schema in a fresh project from those
+files alone. If the migrations drift from what the dev database actually looks like, launch day means
+discovering prod doesn't match.
+
+**Consequences for the checklists below:** anything marked as a Supabase dashboard setting has to be
+done **twice** — once here (dev hygiene, low stakes) and once on the production project at ship time
+(real stakes). Only MFA on your Supabase *account* is shared, since it is account-level.
+
+Demo data never needs cleaning from production because it is never seeded there. Keep
+`scripts/seed-demo.mjs` pointed at dev only.
 
 ---
 
@@ -72,11 +79,25 @@ I have no dashboard access — these are yours.
       PR preview would read and write real client data. Point previews at the development Supabase project.
 - [ ] Turn on Vercel deployment protection if you don't want previews publicly reachable.
 
-## 5. Release checklist
+## 5. Provisioning a fresh production project
+
+Everything a new project needs that does **not** come from the migration files. Keep this list current
+as later phases add hand-configured things — otherwise launch day is archaeology.
+
+1. Create the project. Record its URL, anon key and service-role key.
+2. Run every file in `supabase/migrations/` in order, in the SQL editor.
+3. Create your coach auth user (Authentication → Add user, auto-confirm), then insert the matching
+   `profiles` row with `role = 'coach'`.
+4. Redo every dashboard setting from §3 — signup disabled, password policy, Site URL, advisors.
+5. Storage buckets and their RLS policies (added in Phase 3 — **document them here when built**).
+6. SMTP, if email is ever enabled.
+7. Set the Vercel env vars to this project, per §4.
+8. Run `node scripts/verify-rls.mjs` and `node scripts/audit-security.mjs` against it before going live.
+
+## 6. Release checklist
 
 ```bash
-node scripts/seed-demo.mjs --clean     # no demo data in production
-node scripts/audit-security.mjs        # expect zero findings
+node scripts/audit-security.mjs        # expect zero HIGH findings
 node scripts/verify-rls.mjs            # expect 14/14
 npm audit --omit=dev                   # expect zero vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
@@ -91,11 +112,14 @@ grep -rl "$KEY" .next/static && echo "LEAK" || echo "clean"
 
 ---
 
-## 6. Known gaps, deliberately deferred
+## 7. Known gaps, deliberately deferred
 
 - **CSP still allows `script-src 'unsafe-inline'`.** Next.js inlines its hydration payload, so
   tightening this needs nonces threaded through the app. A half-applied CSP that breaks production is
   worse than a moderate one, so this is a follow-up, not a quick fix.
+- **Leaked-password protection needs the Supabase Pro plan.** On the free tier the toggle can read as
+  enabled without being enforced — the audit script probes a known-breached password to check whether
+  it actually applies.
 - **No error monitoring.** Right now a production exception is invisible to you. Wire up Sentry (or at
   minimum read Vercel's function logs) before you have real clients depending on this.
 - **No automated tests or CI.** The two scripts above are manual. Worth a GitHub Action that runs
@@ -106,7 +130,7 @@ grep -rl "$KEY" .next/static && echo "LEAK" || echo "clean"
 - **No audit trail.** There is no record of who changed a client's plan or weight, or when. Consider it
   if you ever need to answer "why does my plan say this".
 
-## 7. Security work upcoming phases must not skip
+## 8. Security work upcoming phases must not skip
 
 - **Phase 3 — Supabase Storage** for diet photos and progress photos. Buckets default to public in the
   dashboard UI. These are photos of people's bodies and meals: make the bucket **private**, add RLS
