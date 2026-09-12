@@ -414,6 +414,12 @@ tinting a `+0.4` green or red would be inventing a judgement. Sign and magnitude
 A delta renders only when both sets have that site filled in, and a change under 0.05 cm renders as
 nothing rather than `0.0`. Missing values are `—` per §7.
 
+Above the table, once there are **two or more** sets, a **Trends** card: a 4-column grid of the eight
+sites, each a §4 Sparkline (120×26) under an 11px `--color-muted-2` label, over the latest value in
+mono 13px `ink` and the total change since the first set in mono 11px `--color-muted-2`. One set
+renders no card at all — a sparkline of one point is a dot, not a trend. This reuses the roster
+Sparkline unchanged; it is not a second chart spec.
+
 Entry is a §4 Form card above the table: a date, then a 4-column grid of the eight sites with `cm` as
 a fixed suffix. **Saving a date that already exists replaces that set**, and the form says so — a
 coach re-measuring on the same day is correcting the entry, not adding a second point.

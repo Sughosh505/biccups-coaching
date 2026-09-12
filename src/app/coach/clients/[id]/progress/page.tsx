@@ -9,7 +9,7 @@ import {
   saveMeasurement,
   uploadProgressPhotos,
 } from "@/app/coach/clients/[id]/progress/actions";
-import { Button, Card, CardHeader, EmptyState, Field } from "@/components/ui";
+import { Button, Card, CardHeader, EmptyState, Field, Sparkline } from "@/components/ui";
 import { ImageIcon, InfoIcon, XIcon } from "@/components/icons";
 import { MEASUREMENT_SITES } from "@/lib/types";
 
@@ -90,6 +90,50 @@ export default async function ClientProgressPage({
           </div>
         </form>
       </Card>
+
+      {measurements.length > 1 ? (
+        <Card>
+          <CardHeader
+            title="Trends"
+            meta={
+              <span className="tnum text-[11px] text-muted-2">
+                {shortDate(measurements[measurements.length - 1].measurement.date)} →{" "}
+                {shortDate(measurements[0].measurement.date)}
+              </span>
+            }
+          />
+          <div className="grid grid-cols-4 gap-x-5 gap-y-4 p-4">
+            {MEASUREMENT_SITES.map(([key, label]) => {
+              // Oldest to newest: Sparkline plots left to right, while the
+              // history table below is newest first.
+              const series = measurements
+                .map((m) => m.measurement[key])
+                .filter((v) => v != null)
+                .map(Number)
+                .reverse();
+              const total = series.length > 1 ? series[series.length - 1] - series[0] : null;
+
+              return (
+                <div key={key} className="flex flex-col gap-1.5">
+                  <span className="text-[11px] text-muted-2">{label}</span>
+                  <Sparkline values={series} width={120} height={26} />
+                  <span className="flex items-baseline gap-2">
+                    <span className="tnum text-[13px] font-medium text-ink">
+                      {series.length ? `${series[series.length - 1]} cm` : "—"}
+                    </span>
+                    {total != null && Math.abs(total) >= 0.05 ? (
+                      <span className="tnum text-[11px] text-muted-2">
+                        {total > 0 ? "+" : "−"}
+                        {Math.abs(total).toFixed(1)} overall
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader
