@@ -43,3 +43,6 @@ docs/frontend/canvas/coach-screens.html
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase CLI scratch
+supabase/.temp

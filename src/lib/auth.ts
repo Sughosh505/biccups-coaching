@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Role } from "@/lib/types";
+import type { Client, Role } from "@/lib/types";
 
 export type Actor = { userId: string; role: Role; displayName: string | null };
 
@@ -37,4 +37,29 @@ export async function requireRole(...allowed: Role[]): Promise<Actor> {
 
 export function requireCoach() {
   return requireRole("coach");
+}
+
+export type ClientActor = Actor & { clientId: string; client: Client };
+
+/**
+ * Every coaching-client screen needs `clients.id`, which `Actor` does not carry.
+ * The row is read through the caller's own session — policy `clients_select_own`
+ * permits exactly this — so no service-role client is involved anywhere on the
+ * client side of the app.
+ */
+export async function requireClient(): Promise<ClientActor> {
+  const actor = await requireRole("coaching_client");
+  const supabase = await createClient();
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("auth_user_id", actor.userId)
+    .single();
+
+  // A profile with no linked client row is a half-finished provisioning, not a
+  // login. Fail closed rather than rendering an empty shell.
+  if (!client) redirect("/login?error=forbidden");
+
+  return { ...actor, clientId: client.id, client: client as Client };
 }

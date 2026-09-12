@@ -183,6 +183,67 @@ for (const [key, value] of Object.entries(env)) {
   else ok(`${key}: absent from .next/static`);
 }
 
+// --------------------------------------------- 10. storage buckets
+// Buckets are created with `insert into storage.buckets`, which the `create table`
+// discovery above cannot see — so they are enumerated separately here. Without this
+// section a bucket would slip through the gate entirely.
+console.log("\n[10] Storage buckets must be private");
+
+const BUCKETS = [
+  ...sql.matchAll(/insert into storage\.buckets[\s\S]{0,200}?values\s*\(\s*'([^']+)'/gi),
+].map((m) => m[1]);
+
+if (!BUCKETS.length) {
+  console.log("  skip  no buckets declared in migrations");
+}
+
+const { data: liveBuckets } = await admin.storage.listBuckets();
+
+for (const bucket of BUCKETS) {
+  const live = (liveBuckets ?? []).find((b) => b.name === bucket || b.id === bucket);
+
+  if (!live) {
+    issue(
+      "HIGH",
+      `${bucket} bucket is missing`,
+      "Declared in a migration but absent from the project — apply the migration in the SQL editor.",
+    );
+    continue;
+  }
+
+  if (live.public) {
+    issue(
+      "HIGH",
+      `${bucket} is a PUBLIC bucket`,
+      "Anyone with the object URL can read it. These are photos of people's bodies and meals — set public = false.",
+    );
+  } else ok(`${bucket}: private`);
+
+  if (new RegExp(`bucket_id = '${bucket}'`, "i").test(sql)) {
+    ok(`${bucket}: storage.objects policy present`);
+  } else {
+    issue(
+      "HIGH",
+      `${bucket} has no storage.objects policy`,
+      "Nothing scopes object access to its owner.",
+    );
+  }
+
+  const { data: listed, error: listErr } = await anon.storage.from(bucket).list();
+  if (listErr) ok(`${bucket}: anonymous list blocked (${listErr.message})`);
+  else if ((listed ?? []).length === 0) ok(`${bucket}: anonymous list empty`);
+  else issue("HIGH", `${bucket} is listable anonymously`, `${listed.length} object(s) returned`);
+
+  const probe = await fetch(`${URL_}/storage/v1/object/public/${bucket}/probe.jpg`);
+  if (probe.status === 200) {
+    issue(
+      "HIGH",
+      `${bucket} serves objects without a signed URL`,
+      "The public object route returned 200.",
+    );
+  } else ok(`${bucket}: public object route rejected (${probe.status})`);
+}
+
 // ------------------------------------------------------------- summary
 const high = findings.filter((f) => f.severity === "HIGH").length;
 console.log(`\n=== ${findings.length} finding(s), ${high} high ===`);

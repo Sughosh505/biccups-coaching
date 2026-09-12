@@ -199,6 +199,16 @@ with a 3px `--color-base` ring. Value shown above-right as mono 22px/500 accent 
 Value left in mono 19px/500; **unit suffix right in muted-2** — the user never types the unit.
 Placeholder state: value in `--color-faint`.
 
+### Optional note (phone) — added in Phase 3
+
+Not a new component. The **Calories** field carries the caption *"Didn't track today? Leave it blank and
+add a note."* and is followed immediately by a **Number field** with `type="text"`, label **Note**,
+placeholder *Optional*, writing `daily_checkins.notes`.
+
+This is what stops prose landing in a numeric column (`Didnt track sick` in the sheet's CALORIES cell).
+In the coach's check-in table a row that has a note tints its Calories value `--color-warn` and appends a
+12px warn info icon carrying the note as its tooltip.
+
 ### Segmented Yes/No (phone)
 
 Two equal columns, gap 10px, each 50px tall, radius 11px.
@@ -364,5 +374,8 @@ Never a silent gap.
 - Per-meal-group macros (D-1) will need a small `plan_meals` schema decision in Phase 4 — where the group total
   lives. Raise it before writing the migration; **do not change the schema without asking.**
 - Build the §4 components as shared React components first. Screens compose them; screens do not re-style them.
-- Recharts is the charting library per the stack, but the chart specs in §4 (stroke widths, dash arrays, opacities)
-  still apply — configure Recharts to match, don't accept its defaults.
+- ~~Recharts is the charting library per the stack~~ — **changed in Phase 3.** The weight chart, sparkline
+  and week squares are hand-rolled inline SVG in `src/components/ui/index.tsx`. The §4 specs are the
+  implementation directly rather than a target to configure a library towards, the charts stay server
+  components with no client JS, and no dependency was added. Recharts remains a reasonable choice if a
+  later phase needs tooltips or brushing; until then, do not add it for a chart this file already specifies.

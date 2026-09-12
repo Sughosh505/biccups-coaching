@@ -114,25 +114,155 @@ check(
   `role is now ${roleAfter.role}${escalate ? "" : " (update silently applied)"}`,
 );
 
+// --- adversarial WRITES against daily_checkins -------------------------------
+// An RLS update that matches no row returns no error and zero rows, so asserting
+// on `error` alone is a false pass. Every write below is re-read with `admin`.
+const PROBE_OWN_DATE = "2099-01-01";
+const PROBE_CROSS_DATE = "2099-01-02";
+
+const { error: crossInsert } = await asClient
+  .from("daily_checkins")
+  .insert({ client_id: theirs.id, date: PROBE_CROSS_DATE, weight: 80 });
+const { data: crossInserted } = await admin
+  .from("daily_checkins")
+  .select("id")
+  .eq("client_id", theirs.id)
+  .eq("date", PROBE_CROSS_DATE);
+check(
+  "12. client CANNOT insert a check-in for another client",
+  (crossInserted?.length ?? 0) === 0,
+  crossInsert ? "" : "insert silently applied",
+);
+
+const { data: theirCheckin } = await admin
+  .from("daily_checkins")
+  .select("id, weight")
+  .eq("client_id", theirs.id)
+  .order("date", { ascending: false })
+  .limit(1)
+  .single();
+
+await asClient.from("daily_checkins").update({ weight: 999 }).eq("id", theirCheckin.id);
+const { data: theirAfter } = await admin
+  .from("daily_checkins")
+  .select("weight")
+  .eq("id", theirCheckin.id)
+  .single();
+check(
+  "13. client CANNOT update another client's check-in",
+  Number(theirAfter.weight) === Number(theirCheckin.weight),
+  `weight is now ${theirAfter.weight}`,
+);
+
+const { data: myCheckin } = await admin
+  .from("daily_checkins")
+  .select("id")
+  .eq("client_id", mine.id)
+  .order("date", { ascending: false })
+  .limit(1)
+  .single();
+
+await asClient.from("daily_checkins").update({ client_id: theirs.id }).eq("id", myCheckin.id);
+const { data: reassigned } = await admin
+  .from("daily_checkins")
+  .select("client_id")
+  .eq("id", myCheckin.id)
+  .single();
+check(
+  "14. client CANNOT reassign their own check-in to another client",
+  reassigned.client_id === mine.id,
+  `client_id is now ${reassigned.client_id}`,
+);
+
+await asClient.from("daily_checkins").delete().eq("id", myCheckin.id);
+const { data: survived } = await admin.from("daily_checkins").select("id").eq("id", myCheckin.id);
+check(
+  "15. client CANNOT delete their own check-in (no delete policy)",
+  (survived?.length ?? 0) === 1,
+);
+
+const { error: ownInsert } = await asClient
+  .from("daily_checkins")
+  .insert({ client_id: mine.id, date: PROBE_OWN_DATE, weight: 80 });
+const { error: dupInsert } = await asClient
+  .from("daily_checkins")
+  .insert({ client_id: mine.id, date: PROBE_OWN_DATE, weight: 81 });
+check(
+  "16. one check-in per day is enforced by the database, not the UI",
+  !ownInsert && dupInsert?.code === "23505",
+  ownInsert ? `own insert failed: ${ownInsert.message}` : `got ${dupInsert?.code ?? "no error"}`,
+);
+
+// --- storage: the diet photo bucket ------------------------------------------
+const BUCKET = "daily-photos";
+const jpeg = () => new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xdb])], { type: "image/jpeg" });
+const stamp = Date.now();
+const theirPath = `${theirs.id}/verify-${stamp}.jpg`;
+const ownPath = `${mine.id}/verify-${stamp}.jpg`;
+
+const { error: crossUpload } = await asClient.storage
+  .from(BUCKET)
+  .upload(theirPath, jpeg(), { contentType: "image/jpeg" });
+check(
+  "17. client CANNOT upload into another client's photo folder",
+  !!crossUpload,
+  crossUpload ? "" : "upload succeeded",
+);
+
+const { error: ownUpload } = await asClient.storage
+  .from(BUCKET)
+  .upload(ownPath, jpeg(), { contentType: "image/jpeg" });
+check("18. client CAN upload into their own folder", !ownUpload, ownUpload?.message);
+
+await admin.storage.from(BUCKET).upload(theirPath, jpeg(), { contentType: "image/jpeg" });
+const { error: crossDownload } = await asClient.storage.from(BUCKET).download(theirPath);
+check(
+  "19. client CANNOT download another client's photo",
+  !!crossDownload,
+  crossDownload ? "" : "download succeeded",
+);
+
+const rawObject = await fetch(`${URL_}/storage/v1/object/public/${BUCKET}/${ownPath}`);
+check(
+  "20. photos are not readable without a signed URL",
+  rawObject.status !== 200,
+  `status ${rawObject.status}`,
+);
+
 // --- routing, as that client -------------------------------------------------
 const cookie = cookieFor(session.session);
 const coachArea = await fetch(`${BASE}/coach`, { headers: { cookie }, redirect: "manual" });
 check(
-  "12. client is bounced out of /coach",
+  "21. client is bounced out of /coach",
   coachArea.status === 307 && (coachArea.headers.get("location") ?? "").includes("/client"),
   `status ${coachArea.status}`,
 );
 
-const clientArea = await fetch(`${BASE}/client`, { headers: { cookie }, redirect: "manual" });
-check("13. client can reach /client", clientArea.status === 200, `status ${clientArea.status}`);
+// Renders the check-in form, the cut chart and the week squares under a real
+// client session, so a server-side throw in any of them fails the gate.
+const clientRoutes = ["/client", "/client/progress", "/client/plan"];
+const clientStatuses = [];
+for (const route of clientRoutes) {
+  const res = await fetch(`${BASE}${route}`, { headers: { cookie }, redirect: "manual" });
+  clientStatuses.push(`${route} ${res.status}`);
+}
+check(
+  "22. client can reach every /client route",
+  clientStatuses.every((entry) => entry.endsWith(" 200")),
+  clientStatuses.join(", "),
+);
 
 // --- cleanup: unlink before deleting, per the FK ------------------------------
+// Probe rows and objects go first: a leftover 2099 row collides with the unique
+// constraint on the next run and turns test 16 into a false failure.
+await admin.from("daily_checkins").delete().in("date", [PROBE_OWN_DATE, PROBE_CROSS_DATE]);
+await admin.storage.from(BUCKET).remove([ownPath, theirPath]);
 await admin.from("clients").update({ auth_user_id: null }).eq("id", mine.id);
 await admin.from("profiles").delete().eq("id", created.user.id);
 await admin.auth.admin.deleteUser(created.user.id);
 
 const { data: after } = await admin.from("clients").select("auth_user_id").eq("id", mine.id).single();
-check("14. cleanup unlinked the client", after.auth_user_id === null);
+check("23. cleanup unlinked the client", after.auth_user_id === null);
 
 console.log(`\n--- ${pass} passed, ${fail} failed ---`);
 if (fail > 0) process.exit(1);

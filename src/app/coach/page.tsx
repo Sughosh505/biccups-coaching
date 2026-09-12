@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachHome } from "@/lib/queries/coach";
-import { complianceTone, today } from "@/lib/metrics";
+import { complianceTone, currentWeekSquares, today } from "@/lib/metrics";
 import {
   Avatar,
   ButtonLink,
@@ -10,6 +10,7 @@ import {
   StatTile,
   StatusChip,
   toneText,
+  WeekSquares,
 } from "@/components/ui";
 import { AlertTriangleIcon, PlusIcon } from "@/components/icons";
 
@@ -25,20 +26,9 @@ function longDate(iso: string) {
   });
 }
 
-/** Mon-start week containing `now`, as ISO dates. */
-function currentWeek(now: string): string[] {
-  const [y, m, d] = now.split("-").map(Number);
-  const base = Date.UTC(y, m - 1, d);
-  const weekday = (new Date(base).getUTCDay() + 6) % 7; // Mon = 0
-  return Array.from({ length: 7 }, (_, i) =>
-    new Date(base - weekday * 86_400_000 + i * 86_400_000).toISOString().slice(0, 10),
-  );
-}
-
 export default async function CoachHomePage() {
   const home = await getCoachHome();
   const now = today();
-  const week = currentWeek(now);
 
   const checkedIn = home.checkedInToday.length;
   const total = home.roster.length;
@@ -211,7 +201,7 @@ export default async function CoachHomePage() {
                   className="flex items-center justify-between border-b border-divider-soft px-4 py-2.5 last:border-0"
                 >
                   <span className="truncate text-[12.5px] text-ink-2">{entry.client.name}</span>
-                  <WeekDots week={week} now={now} logged={entry.loggedDates} />
+                  <WeekSquares days={currentWeekSquares(entry.loggedDates, now)} />
                 </div>
               ))
             )}
@@ -276,26 +266,5 @@ export default async function CoachHomePage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function WeekDots({ week, now, logged }: { week: string[]; now: string; logged: string[] }) {
-  const set = new Set(logged);
-
-  return (
-    <span className="flex gap-[5px]">
-      {week.map((date) => {
-        const future = date > now;
-        return (
-          <span
-            key={date}
-            className={`h-[13px] w-[13px] rounded-[3.5px] ${
-              set.has(date) ? "bg-accent" : future ? "bg-surface" : "bg-divider-faint"
-            }`}
-            title={date}
-          />
-        );
-      })}
-    </span>
   );
 }

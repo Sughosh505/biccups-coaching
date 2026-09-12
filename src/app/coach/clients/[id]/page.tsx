@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getClientDetail } from "@/lib/queries/coach";
 import { createClientLogin } from "@/app/coach/clients/actions";
-import { complianceTone, describeLastCheckin, weightSeries } from "@/lib/metrics";
+import { complianceTone, describeLastCheckin, formatShortDate } from "@/lib/metrics";
 import {
   Button,
   Card,
@@ -10,6 +10,7 @@ import {
   Field,
   ProgressBar,
   StatTile,
+  WeightChart,
 } from "@/components/ui";
 import { InfoIcon, KeyIcon } from "@/components/icons";
 
@@ -39,8 +40,12 @@ export default async function ClientOverviewPage({
 
   const { client, checkins, measurements, compliance, lastCheckin } = detail;
 
-  const series = weightSeries(checkins);
-  const current = series.length ? series[series.length - 1] : client.current_weight;
+  // Oldest-to-newest, with dates, so the chart can label where the cut started.
+  const series = checkins
+    .filter((c) => c.weight != null)
+    .map((c) => ({ date: c.date, weight: c.weight as number }))
+    .reverse();
+  const current = series.length ? series[series.length - 1].weight : client.current_weight;
   const sinceStart =
     current != null && client.start_weight != null ? current - client.start_weight : null;
   const toGoal = current != null && client.goal_weight != null ? current - client.goal_weight : null;
@@ -117,17 +122,25 @@ export default async function ClientOverviewPage({
           <EmptyState
             icon={<InfoIcon size={24} />}
             title="Not enough check-ins to chart yet"
-            hint="The weight trend and goal line appear here once this client has submitted a few daily check-ins. The check-in form ships in Phase 3."
+            hint="The weight trend and goal line appear here once this client has logged a weight on two days."
           />
         ) : (
-          <div className="px-5 py-4">
+          <div className="flex flex-col gap-3.5 px-5 py-4">
+            <WeightChart
+              points={series}
+              goal={client.goal_weight}
+              variant="desktop"
+              startLabel={formatShortDate(series[0].date)}
+              width={880}
+              height={200}
+            />
             <div className="flex items-center gap-2.5">
               <ProgressBar
                 pct={goalProgress ?? 0}
                 tone={compliance ? complianceTone(compliance) : "good"}
               />
               <span className="tnum text-[12px] text-muted">
-                {series.length} points · charting lands in Phase 3
+                {series.length} weights logged
               </span>
             </div>
           </div>
