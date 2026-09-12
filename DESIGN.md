@@ -588,6 +588,15 @@ Short factual answers (`29`, `164 cm`, `Vegetarian`) pair up two to a row; a par
 injuries gets the full width. The rule is on the answer, never authored per question — the coach edits
 the Google Form freely and the layout has to keep working.
 
+**A consultation answer line becomes a link only when the whole line is an `https://` URL.**
+Google Forms file uploads (photos, bloodwork) arrive as Drive links, one per line, and the coach needs
+to open them before the call. The rule is deliberately narrow — the line is matched in full, never
+scanned for a URL inside prose — because this is untrusted input from a public endpoint and a
+`javascript:` or `data:` URL reaching an `href` is the whole attack. Same reasoning as the plan's
+Lyfta link above; the host is likewise unrestricted. Everything else renders as plain text, and
+nothing on this screen is ever `dangerouslySetInnerHTML`. Links carry `target="_blank"` and
+`rel="noopener noreferrer"` and render as an external-link icon plus **Open file**.
+
 **Consultation sections render in first-appearance order, and an answer with no section is kept.**
 Answers whose section is blank fall into a final group labelled `Form responses` rather than being
 dropped — the same rule as `Any time` for supplements below. A record whose responses predate the

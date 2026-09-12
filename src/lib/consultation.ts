@@ -9,11 +9,20 @@ import type { ConsultationAnswer, ConsultationFormResponses } from "@/lib/types"
  * seeded by scripts/seed-demo.mjs and still renders, as one unsectioned group.
  */
 
+/**
+ * One line of an answer. `href` is set only when that whole line is an https://
+ * URL — a file upload, in practice, and a multi-file upload is one URL per line.
+ * Everything else renders as plain text, so a javascript: or data: URL can never
+ * reach an href.
+ */
+export type ConsultationLine = { text: string; href: string | null };
+
 export type ConsultationField = {
   q: string;
   a: string;
   /** Spans both columns of the review grid. See DESIGN.md §7. */
   wide: boolean;
+  lines: ConsultationLine[];
 };
 
 export type ConsultationSection = {
@@ -35,8 +44,28 @@ function isWide(a: string): boolean {
   return a.length > WIDE_AT || a.includes("\n");
 }
 
+/**
+ * The whole answer must be one https:// URL. Deliberately not a scan for URLs
+ * inside prose: the narrow rule is what keeps a crafted answer from smuggling a
+ * link into an href, and the same reasoning as the plan's Lyfta link (DESIGN.md §7).
+ */
+function linkFor(a: string): string | null {
+  if (/\s/.test(a) || !a.toLowerCase().startsWith("https://")) return null;
+  try {
+    // Re-parse rather than trusting the prefix: "https://" alone is not a URL.
+    const url = new URL(a);
+    return url.protocol === "https:" && url.hostname !== "" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function field(q: string, a: string): ConsultationField {
-  return { q, a, wide: isWide(a) };
+  const lines = a.split("\n").map((line) => {
+    const text = line.trim();
+    return { text, href: linkFor(text) };
+  });
+  return { q, a, wide: isWide(a), lines };
 }
 
 function hasFieldsArray(raw: object): raw is { fields: unknown[] } {

@@ -15,7 +15,13 @@ import {
   StatusChip,
   TextareaField,
 } from "@/components/ui";
-import { ChevronLeftIcon, ConsultationsIcon, MailIcon, PhoneIcon } from "@/components/icons";
+import {
+  ChevronLeftIcon,
+  ConsultationsIcon,
+  ExternalLinkIcon,
+  MailIcon,
+  PhoneIcon,
+} from "@/components/icons";
 import type { Tone } from "@/lib/metrics";
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -159,11 +165,31 @@ export default async function ConsultationReviewPage({
                         className={`flex flex-col gap-1 ${f.wide ? "col-span-2" : ""}`}
                       >
                         <span className="text-[11px] font-medium text-muted-2">{f.q || "—"}</span>
-                        {/* Text only, never dangerouslySetInnerHTML — this arrived
-                            from a public endpoint. */}
-                        <span className="whitespace-pre-line text-[13.5px] leading-[1.5] text-ink">
-                          {f.a || "—"}
-                        </span>
+                        {/* Never dangerouslySetInnerHTML — this arrived from a
+                            public endpoint. A line becomes a link only when the
+                            whole line is an https:// URL (DESIGN.md §7). */}
+                        {f.a ? (
+                          <span className="flex flex-col gap-0.5 text-[13.5px] leading-[1.5] text-ink">
+                            {f.lines.map((line, li) =>
+                              line.href ? (
+                                <a
+                                  key={li}
+                                  href={line.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex w-fit items-center gap-1.5 text-accent hover:text-accent-hover"
+                                >
+                                  <ExternalLinkIcon size={14} className="shrink-0" />
+                                  Open file
+                                </a>
+                              ) : (
+                                <span key={li}>{line.text}</span>
+                              ),
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[13.5px] leading-[1.5] text-ink">—</span>
+                        )}
                       </div>
                     ))}
                   </div>

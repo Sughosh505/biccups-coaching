@@ -82,7 +82,15 @@ helps someone probing the endpoint.
 // both hit. Add your own wording here if the Form asks it differently.
 var NAME_FIELDS  = ['Name', 'Full name', 'Your name'];
 var EMAIL_FIELDS = ['Email', 'Email address', 'Email ID'];
-var PHONE_FIELDS = ['Phone', 'Phone number', 'Mobile', 'Mobile number', 'Contact number', 'WhatsApp number'];
+var PHONE_FIELDS = [
+  'Phone', 'Phone number', 'Mobile', 'Mobile number', 'Contact number',
+  'WhatsApp number', 'Contact whatsapp number'
+];
+
+// Google Forms gives the FIRST section no page-break item, so questions before the
+// first break have no section name of their own. They are the intake basics, so
+// they get a label rather than falling into a generic bucket.
+var FIRST_SECTION = 'Basics';
 
 function onFormSubmit(e) {
   var props  = PropertiesService.getScriptProperties();
@@ -98,7 +106,12 @@ function onFormSubmit(e) {
 
   e.response.getItemResponses().forEach(function (item) {
     var question = item.getItem().getTitle();
-    var answer   = formatAnswer_(item.getResponse());
+    var isUpload = item.getItem().getType() === FormApp.ItemType.FILE_UPLOAD;
+    // A file-upload answer is a list of Drive file IDs, which are meaningless on
+    // their own. Turn them into links the coach can actually open.
+    var answer = isUpload
+      ? driveLinks_(item.getResponse())
+      : formatAnswer_(item.getResponse());
     if (!answer) return;
 
     if (matches_(question, NAME_FIELDS))  { payload.name  = answer; return; }
@@ -140,9 +153,9 @@ function onFormSubmit(e) {
  */
 function logFormStructure() {
   var form = FormApp.getActiveForm();
-  var current = '(no section - before the first page break)';
+  var current = FIRST_SECTION;
   var seen = { name: false, email: false, phone: false };
-  var out = ['SECTION: ' + current];
+  var out = ['SECTION: ' + current + '   (no page break - labelled by FIRST_SECTION)'];
 
   form.getItems().forEach(function (item) {
     if (item.getType() === FormApp.ItemType.PAGE_BREAK) {
@@ -182,7 +195,7 @@ function matches_(title, candidates) {
  * section until the next one. Items before the first page break have no section.
  */
 function sectionsByItemId_(form) {
-  var current = null;
+  var current = FIRST_SECTION;
   var map = {};
 
   form.getItems().forEach(function (item) {
@@ -194,6 +207,19 @@ function sectionsByItemId_(form) {
   });
 
   return map;
+}
+
+/**
+ * File uploads land in the Form owner's Drive, and the response is the file IDs.
+ * The coach owns those files, so a plain Drive link opens for them and for nobody
+ * else — the permissions stay Google's problem, not ours.
+ */
+function driveLinks_(ids) {
+  var list = Array.isArray(ids) ? ids : [ids];
+  return list
+    .filter(String)
+    .map(function (id) { return 'https://drive.google.com/file/d/' + id + '/view'; })
+    .join('\n');
 }
 
 /** Checkbox and grid answers come back as arrays (or arrays of arrays). */
