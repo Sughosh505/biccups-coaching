@@ -6,14 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { requireClient } from "@/lib/auth";
 import { PHOTO_BUCKET } from "@/lib/queries/client";
 import { daysBetween, today } from "@/lib/metrics";
+import type { CHECKIN_ERRORS } from "@/lib/checkin-errors";
 
 /**
  * Postgres error text can name columns, constraints and policies. Log it server-side
  * and hand the user something generic — never round-trip it through a query string.
  */
-function reportable(context: string, error: { message: string; code?: string }): string {
+function report(context: string, error: { message: string; code?: string }): void {
   console.error(`[${context}] ${error.code ?? "error"}: ${error.message}`);
-  return `${context} failed. Please try again.`;
 }
 
 function text(form: FormData, key: string): string | null {
@@ -49,8 +49,10 @@ const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 export async function submitCheckin(form: FormData) {
   const date = text(form, "date") ?? today();
 
-  function fail(msg: string): never {
-    redirect(`/client?date=${date}&error=${encodeURIComponent(msg)}`);
+  // Codes, not messages: the client screen renders only codes it recognises, so a
+  // crafted ?error= link cannot put arbitrary words in the app's own error styling.
+  function fail(code: keyof typeof CHECKIN_ERRORS): never {
+    redirect(`/client?date=${date}&error=${code}`);
   }
 
   // Identity comes from the session. client_id is never read from the form body —
@@ -58,15 +60,15 @@ export async function submitCheckin(form: FormData) {
   const { clientId, client } = await requireClient();
   const supabase = await createClient();
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail("That date is not valid.");
-  if (daysBetween(date, today()) < 0) fail("You cannot check in for a future date.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail("bad-date");
+  if (daysBetween(date, today()) < 0) fail("future-date");
   if (client.start_date && daysBetween(client.start_date, date) < 0) {
-    fail("That date is before you started coaching.");
+    fail("before-start");
   }
 
   const lyftaLink = text(form, "lyfta_link");
   if (lyftaLink && !/^https?:\/\//i.test(lyftaLink)) {
-    fail("The workout link must start with http:// or https://");
+    fail("bad-link");
   }
 
   // Photo: validated here, uploaded through the caller's own session so the storage
@@ -75,8 +77,8 @@ export async function submitCheckin(form: FormData) {
   const photo = form.get("diet_photo");
 
   if (photo instanceof File && photo.size > 0) {
-    if (!PHOTO_TYPES.includes(photo.type)) fail("Photos must be JPEG, PNG or WebP.");
-    if (photo.size > MAX_PHOTO_BYTES) fail("That photo is too large. Keep it under 5 MB.");
+    if (!PHOTO_TYPES.includes(photo.type)) fail("photo-type");
+    if (photo.size > MAX_PHOTO_BYTES) fail("photo-size");
 
     const extension = photo.type === "image/png" ? "png" : photo.type === "image/webp" ? "webp" : "jpg";
     const objectPath = `${clientId}/${date}-${crypto.randomUUID()}.${extension}`;
@@ -85,7 +87,10 @@ export async function submitCheckin(form: FormData) {
       .from(PHOTO_BUCKET)
       .upload(objectPath, photo, { contentType: photo.type, upsert: false });
 
-    if (uploadError) fail(reportable("Uploading the photo", uploadError));
+    if (uploadError) {
+      report("Uploading the photo", uploadError);
+      fail("upload-failed");
+    }
 
     // Replacing a photo: drop the old object rather than orphaning it in the bucket.
     if (photoPath && photoPath !== objectPath) {
@@ -121,7 +126,10 @@ export async function submitCheckin(form: FormData) {
     .from("daily_checkins")
     .upsert(row, { onConflict: "client_id,date" });
 
-  if (error) fail(reportable("Saving your check-in", error));
+  if (error) {
+    report("Saving your check-in", error);
+    fail("save-failed");
+  }
 
   revalidatePath("/client", "layout");
   redirect(`/client?date=${date}&saved=1`);

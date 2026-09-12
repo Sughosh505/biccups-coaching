@@ -4,6 +4,7 @@ import { getClientDashboard, signedPhotoUrl } from "@/lib/queries/client";
 import { TIMEZONE, formatShortDate, today } from "@/lib/metrics";
 import { Avatar } from "@/components/ui";
 import { CheckIcon, ZapIcon } from "@/components/icons";
+import { checkinErrorMessage } from "@/lib/checkin-errors";
 import { CheckinForm } from "@/components/client/CheckinForm";
 import { CutCard } from "@/components/client/CutCard";
 import { DateControl } from "@/components/client/DateControl";
@@ -44,6 +45,7 @@ export default async function ClientTodayPage({
   const photoUrl = await signedPhotoUrl(entry?.diet_photo_url ?? null);
 
   const firstName = (displayName ?? client.name ?? "").split(" ")[0] || "there";
+  const errorMessage = checkinErrorMessage(params.error);
   const editing = params.edit === "1";
   const isToday = date === now;
 
@@ -69,9 +71,9 @@ export default async function ClientTodayPage({
           </div>
         ) : null}
 
-        {params.error ? (
+        {errorMessage ? (
           <div className="mt-[18px] rounded-[11px] border border-alert/30 bg-alert/10 px-4 py-3 text-[13px] text-alert">
-            {params.error}
+            {errorMessage}
           </div>
         ) : null}
       </header>

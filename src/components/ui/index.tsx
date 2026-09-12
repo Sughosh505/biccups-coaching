@@ -192,11 +192,16 @@ const AVATAR_SIZES = {
 
 export function initialsOf(name: string | null | undefined): string {
   if (!name) return "??";
-  return name
+  // Skip separator words. "Demo — Arjun Pillai" must read DA, never "D—".
+  const words = name
     .trim()
     .split(/\s+/)
+    .filter((part) => /^[\p{L}\p{N}]/u.test(part));
+
+  if (!words.length) return "??";
+  return words
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
+    .map((part) => part[0].toUpperCase())
     .join("");
 }
 
