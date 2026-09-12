@@ -293,6 +293,19 @@ Selected: accent fill, on-accent text, 600. Unselected: surface, border, muted t
 
 50×30px pill. Off: `background: border`, 24px knob in muted-2. On: accent track, on-accent knob.
 
+### Account (phone) — added in Phase 3
+
+The tab bar is fixed at three tabs, so account lives behind the **avatar**, which is the entry point on
+both the Today and Progress headers (`aria-label="Your account"`, linking to `/client/account`). The
+avatar means the same thing on every client screen and nothing else is added to the chrome.
+
+`/client/account` is: back link → 46px Avatar + name (22px/600) + email (13.5px muted) → a Card of
+read-only rows (`Email · Started · Day · Split`, label muted left, mono value right, `divider-soft`
+between) → a full-width **Secondary** button, 50px, radius 12px, labelled **Sign out** with a 17px icon.
+
+**Sign out is Secondary, never Primary.** Accent is the positive/on-track colour (§1); putting a
+destructive, session-ending action in it misreads as encouragement.
+
 ### Bottom tab bar (phone)
 
 3 equal columns, `background: tabbar`, `border-top: 1px solid divider-soft`, `padding: 10px 0 22px`.
@@ -364,6 +377,7 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/client` | coaching_client | Today — check-in, or done state | `ClientCheckin.dc.html`, `ClientHome.dc.html` |
 | `/client/progress` | coaching_client | Cut, compliance, measurements, photos | *within* `ClientHome.dc.html` |
 | `/client/plan` | coaching_client | Plan, read-only | `ClientPlan.dc.html` |
+| `/client/account` | coaching_client | Account + sign out | derived — §4 Account |
 | `/plan` | consultation_client | Same plan view, **no tab bar** | `ClientPlan.dc.html` |
 
 Client detail tabs are fixed: **Overview · Check-ins · Diet & supplements · Workouts · Progress**.
@@ -448,6 +462,7 @@ Never a silent gap.
 | — | Clients **can back-date** a check-in. The date control is on the form, and missed days surface an "Add it" prompt. |
 | — | Clients see: cut/trend, compliance %, measurements, progress photos. |
 | — | Clients **never** see form-check notes. Coach-only, already enforced in RLS. |
+| — | Client sign-out lives on `/client/account`, reached by tapping the avatar. The tab bar stays three tabs. |
 | — | Supplements in the plan view are grouped **by timing**, not by product. |
 | — | Weight chart x-axis is **date-proportional**. Index spacing is a correctness bug, not a style choice. |
 | — | Weight chart shows **raw daily weight only** — no rolling average, no smoothing. |

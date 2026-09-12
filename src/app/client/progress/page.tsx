@@ -2,10 +2,9 @@ import Link from "next/link";
 import { requireClient } from "@/lib/auth";
 import { getClientDashboard } from "@/lib/queries/client";
 import { daysBetween, today } from "@/lib/metrics";
-import { Card, EmptyState, WeekSquares, toneText } from "@/components/ui";
-import { AlertTriangleIcon, ImageIcon, InfoIcon, LogOutIcon } from "@/components/icons";
+import { Avatar, Card, EmptyState, WeekSquares, toneText } from "@/components/ui";
+import { AlertTriangleIcon, ImageIcon, InfoIcon } from "@/components/icons";
 import { CutCard } from "@/components/client/CutCard";
-import { logout } from "@/app/login/actions";
 
 function weekdayName(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
@@ -41,16 +40,13 @@ export default async function ClientProgressPage() {
             {client.start_date ? `Day ${elapsedDays} of your coaching` : "Your coaching so far"}
           </span>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            title="Sign out"
-            aria-label="Sign out"
-            className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-border bg-surface text-muted-2 transition-colors hover:text-ink-2"
-          >
-            <LogOutIcon size={17} />
-          </button>
-        </form>
+        <Link
+          href="/client/account"
+          aria-label="Your account"
+          className="shrink-0 rounded-full transition-opacity hover:opacity-80"
+        >
+          <Avatar name={client.name} size="lg" />
+        </Link>
       </header>
 
       <div className="flex flex-col gap-[22px] px-5 pb-6 pt-[22px]">

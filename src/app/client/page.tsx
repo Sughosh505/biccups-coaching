@@ -59,7 +59,13 @@ export default async function ClientTodayPage({
             </h1>
             <DateControl date={date} min={client.start_date} max={now} />
           </div>
-          <Avatar name={displayName ?? client.name} size="lg" />
+          <Link
+            href="/client/account"
+            aria-label="Your account"
+            className="shrink-0 rounded-full transition-opacity hover:opacity-80"
+          >
+            <Avatar name={displayName ?? client.name} size="lg" />
+          </Link>
         </div>
 
         {dashboard.streak > 0 ? (

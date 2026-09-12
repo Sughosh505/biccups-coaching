@@ -247,7 +247,7 @@ check(
 
 // Renders the check-in form, the cut chart and the week squares under a real
 // client session, so a server-side throw in any of them fails the gate.
-const clientRoutes = ["/client", "/client/progress", "/client/plan"];
+const clientRoutes = ["/client", "/client/progress", "/client/plan", "/client/account"];
 const clientStatuses = [];
 for (const route of clientRoutes) {
   const res = await fetch(`${BASE}${route}`, { headers: { cookie }, redirect: "manual" });
