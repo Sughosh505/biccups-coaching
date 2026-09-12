@@ -3,9 +3,11 @@
 A fitness coaching CRM for a single coach who runs consultation and personal-training clients. Replaces scattered Google Sheets and hand-made Excel plans.
 
 ## Reference docs
+- Index of everything: `docs/README.md`
 - Build plan (per-phase script — follow this): `docs/claude-code-build-plan.md`
 - Full spec (reference for detail): `docs/coaching-app-spec.md`
 - **UI spec (binding — follow exactly): `DESIGN.md`**
+- Launch runbook, security posture and deferred gaps: `docs/production-readiness.md`
 
 Read all three before starting. The build plan is the source of truth for build order; the spec explains the "why" and the access rules; DESIGN.md is the source of truth for how every screen looks.
 
