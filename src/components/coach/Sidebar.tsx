@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { logout } from "@/app/login/actions";
 import {
   ClientsIcon,
   ConsultationsIcon,
   HomeIcon,
+  LogOutIcon,
   PlansIcon,
   ReportsIcon,
 } from "@/components/icons";
@@ -99,10 +101,20 @@ export function Sidebar({
             .map((p) => p[0]?.toUpperCase() ?? "")
             .join("")}
         </span>
-        <span className="flex flex-col">
-          <span className="text-[12.5px] font-medium">{coachName}</span>
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-[12.5px] font-medium">{coachName}</span>
           <span className="text-[11px] text-muted-2">Coach</span>
         </span>
+        <form action={logout} className="ml-auto">
+          <button
+            type="submit"
+            title="Sign out"
+            aria-label="Sign out"
+            className="flex h-8 w-8 items-center justify-center rounded-[7px] text-muted-2 transition-colors hover:bg-surface-2 hover:text-ink-2"
+          >
+            <LogOutIcon size={16} />
+          </button>
+        </form>
       </div>
     </aside>
   );

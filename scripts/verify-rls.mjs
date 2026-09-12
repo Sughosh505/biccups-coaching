@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 
 const env = {};
-for (const line of readFileSync(new URL("./.env.local", import.meta.url), "utf8").split("\n")) {
+for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
   const i = line.indexOf("=");
   if (i === -1) continue;
   env[line.slice(0, i).trim()] = line.slice(i + 1).trim();
