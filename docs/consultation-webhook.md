@@ -60,6 +60,10 @@ helps someone probing the endpoint.
    Script properties, **never** literals in the code below — anyone you give edit access to the Form
    can read the script body.
 3. Paste `Code.gs` below.
+3b. **Check the mapping against the real Form.** Run `logFormStructure` once (select it from the
+    function dropdown → Run → **View → Logs**). It prints every section and question, and flags
+    which ones will be treated as name/email/phone. If a `->` line is missing for any of the three,
+    add that question's exact title to the matching list at the top of `Code.gs`.
 4. **Triggers → Add trigger**: function `onFormSubmit`, event source *From form*, event type
    *On form submit*. Authorise it when prompted.
 5. Submit a test response and confirm it appears at `/coach/consultations`.
@@ -127,6 +131,42 @@ function onFormSubmit(e) {
   if (code !== 201 && code !== 200) {
     throw new Error('Consultation webhook failed: ' + code);
   }
+}
+
+/**
+ * Run this once by hand, before wiring the trigger. Prints the Form exactly as the
+ * webhook will read it: the sections it will group by, and which questions it will
+ * lift into name/email/phone instead of storing as answers.
+ */
+function logFormStructure() {
+  var form = FormApp.getActiveForm();
+  var current = '(no section - before the first page break)';
+  var seen = { name: false, email: false, phone: false };
+  var out = ['SECTION: ' + current];
+
+  form.getItems().forEach(function (item) {
+    if (item.getType() === FormApp.ItemType.PAGE_BREAK) {
+      current = item.getTitle();
+      out.push('');
+      out.push('SECTION: ' + current);
+      return;
+    }
+
+    var title = item.getTitle();
+    var tag = '';
+    if (matches_(title, NAME_FIELDS))  { tag = '   -> name';  seen.name = true; }
+    if (matches_(title, EMAIL_FIELDS)) { tag = '   -> email'; seen.email = true; }
+    if (matches_(title, PHONE_FIELDS)) { tag = '   -> phone'; seen.phone = true; }
+    out.push('  ' + title + tag);
+  });
+
+  out.push('');
+  out.push('name  mapped: ' + seen.name);
+  out.push('email mapped: ' + seen.email +
+    (seen.email ? '' : '  (ok if Settings -> Collect email addresses is on)'));
+  out.push('phone mapped: ' + seen.phone);
+
+  Logger.log(out.join('\n'));
 }
 
 /** Compare titles ignoring case, spaces and punctuation: 'Full Name:' === 'full name'. */
