@@ -179,11 +179,22 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   are what actually protect the table; the limiter only blunts volume.
 - **`TIMEZONE` is hardcoded** to `Asia/Kolkata` in `src/lib/metrics.ts`. Correct today; wrong the moment
   you coach someone in another timezone, at which point it belongs on the client record.
+- **No client can ever change their password.** There is no `auth.updateUser({ password })` call
+  anywhere in the app, no reset flow, and no "Forgot password" link on `/login`. Whatever the coach
+  sets or generates is that person's password permanently, which also means it lives indefinitely in
+  whatever channel it was sent through — a WhatsApp thread, usually. The coaching-client login card
+  on `/coach/clients/[id]` still tells the coach "They can change it later", which is not true.
+  Two separate pieces of work:
+  - **Self-service change, signed in** — `supabase.auth.updateUser({ password })` on
+    `/client/account` and an equivalent for the consultation client. Needs no email infrastructure.
+    Pair it with runbook step 9 (*Require current password when updating*) so a live session on an
+    unlocked phone cannot lock the owner out.
+  - **Forgot password, signed out** — needs `resetPasswordForEmail` plus **custom SMTP**. Supabase's
+    built-in sender is rate-limited to a handful of messages an hour and is explicitly not for
+    production.
 - **A consultation client's first password is delivered by hand.** No email is sent: the coach reads
-  the generated password off the screen once and passes it on. That puts it in whatever channel they
-  choose — WhatsApp, a phone call — which is outside the app's control, and there is no
-  "resend password" flow. Recovery today means deleting the auth user in Supabase and issuing a new
-  login. A real password-reset email flow is the fix when it starts to hurt.
+  the generated password off the screen once and passes it on. There is no "resend" — recovery today
+  means deleting the auth user in Supabase and issuing a new login.
 - **No audit trail.** Nothing records who changed a client's plan or weight, or when. Phase 4 made this
   slightly more visible: `plans.updated_at` moves on every save, but it records *when*, not *who* or
   *what changed*, and a published plan is edited in place under the client with no version history.
