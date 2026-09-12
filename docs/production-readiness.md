@@ -87,6 +87,10 @@ Ordered. Don't skip the verification at the end.
 16. [ ] **Never prefix a secret with `NEXT_PUBLIC_`.** That single mistake inlines it into the browser
         bundle and exposes everything.
 17. [ ] Production branch → `main`.
+17b. [ ] **Wire up the consultation Form.** Once the domain is live, follow
+        [consultation-webhook.md](consultation-webhook.md): set the two script properties on the
+        Form's Apps Script, add the on-submit trigger, and send one test response. Until this is
+        done no consultation ever reaches the app.
 18. [ ] **Point preview deployments at the dev Supabase project.** By default previews inherit
         production env vars, so every PR preview would read and write real client data.
 19. [ ] Consider Vercel deployment protection so previews aren't publicly reachable.
@@ -95,7 +99,7 @@ Ordered. Don't skip the verification at the end.
 
 20. [ ] Point `.env.local` at the production project temporarily, then:
 ```bash
-node scripts/verify-rls.mjs          # expect 23/23
+node scripts/verify-rls.mjs          # expect 40/40
 node scripts/audit-security.mjs      # expect 0 HIGH; signup and password findings must be clear
 npm audit --omit=dev                 # expect 0 vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
@@ -167,6 +171,12 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
 - **No automated tests or CI.** Both scripts are manual. A GitHub Action running typecheck, lint, build
   and `audit-security.mjs` on every push would close this.
 - **No rate limiting on the login form** beyond Supabase's built-in auth limits.
+- **The consultation webhook's rate limiter is in-memory, so it is per-instance.** `/api/consultation-intake`
+  allows 10 requests per minute per IP, held in a `Map` in the route module. On Vercel each serverless
+  instance keeps its own map, so a distributed flood gets one bucket per instance rather than one
+  overall — a speed bump, not a guarantee. A shared counter needs either a new dependency (Upstash) or
+  a database round-trip on an unauthenticated path. The body cap, the secret check and the unique index
+  are what actually protect the table; the limiter only blunts volume.
 - **`TIMEZONE` is hardcoded** to `Asia/Kolkata` in `src/lib/metrics.ts`. Correct today; wrong the moment
   you coach someone in another timezone, at which point it belongs on the client record.
 - **No audit trail.** Nothing records who changed a client's plan or weight, or when. Phase 4 made this
@@ -186,10 +196,12 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   step 5 and covered by both gate scripts. Progress-photo storage is still outstanding: **Phase 7 must
   reuse this bucket pattern rather than creating a public one**, and must add insert policies to
   `progress_photos`, which is coach-write-only today.
-- **Phase 5 — the consultation webhook** is public and unauthenticated by design. `/api/*` is excluded
-  from the proxy matcher, so **every API route must authenticate itself**. Compare the shared secret with
-  `crypto.timingSafeEqual`, reject oversized bodies, rate-limit it, and treat the Google Form payload as
-  untrusted input.
+- ~~**Phase 5 — the consultation webhook** is public and unauthenticated by design~~ — **done.** The
+  secret is compared as sha256 digests through `crypto.timingSafeEqual` (equal-length buffers, so the
+  throw cannot become a length oracle), the body is capped at 64 KB while streaming rather than after
+  the fact, every field is length-capped and coerced, replays are absorbed by a unique index, and
+  responses carry no body. Rate limiting is in-memory and therefore per-instance — see §5. Covered by
+  gate checks 33-37.
 - **Phase 6 — consultation client logins** must use the same `requireCoach()` assertion as
   `createClientLogin`. ~~`verify-rls.mjs` must be extended to prove a consultation client can reach *only*
   their own plan~~ — **done in Phase 4**, tests 27, 28 and 31: the script provisions a real consultation

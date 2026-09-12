@@ -360,6 +360,31 @@ mis-click from the client screen.
 `Delete this plan` is a ghost action alone below a `divider` rule at the foot of the page — never adjacent to
 Save.
 
+### Pipeline (consultation review) — added in Phase 5
+
+The right-rail timeline on `/coach/consultations/[id]`. Four fixed steps, in order:
+**Form submitted · Consultation call · Plan built · View-only login sent**.
+
+Container `padding: 14px 16px`, column. Each step is a row, gap 11px:
+
+- **Marker column** — a 9px circle with `margin-top: 4px`, then a `1.5 × 30px` connector in
+  `--color-border`. The last step has no connector.
+  Done → `background: accent`. Pending → `background: surface` with a `1.5px --color-border-strong` border.
+- **Text column** — label 12.5px (`ink` 500 when done, `--color-muted-2` when pending) above a second
+  line: the step's date in mono 11.5px `--color-muted-2`, or `Not yet` in `--color-faint`.
+
+**Every step states its date in words**, so the dot is never the only thing carrying "done" (§8).
+A step that is done but has no timestamp reads `Done` rather than an invented date.
+
+### Consultation responses (consultation review) — added in Phase 5
+
+One Card per form section, in the order the sections appear in the form. Header is a standard §4 Card
+header. Body `display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px 28px;
+padding: 16px 18px`; each pair is a column, gap 4px: the question 11px/500 `--color-muted-2` above the
+answer 13.5px/1.5 `ink`.
+
+Answers render as **text only** — this is untrusted input from a public endpoint, so never as markup.
+
 ### Slider (1–10 scales)
 
 Row is **44px tall**. Track 6px, radius 4px, `background: divider-faint`. Fill accent. Thumb 26px circle, accent,
@@ -472,6 +497,7 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/coach/clients/[id]/edit` | coach | Edit client | derived — §4 Form |
 | `/coach/clients/[id]/checkins` | coach | Client detail — Check-ins tab | `ClientCheckins.dc.html` |
 | `/coach/clients/[id]/diet` | coach | Client detail — Diet & supplements tab | `ClientPlan.dc.html` |
+| `/coach/consultations` | coach | Consultations list | derived — §4 Table |
 | `/coach/consultations/[id]` | coach | Consultation review | `ConsultationReview.dc.html` |
 | `/coach/plans` | coach | Plans list | derived — §4 Table |
 | `/coach/plans/new` | coach | New plan — pick the client it belongs to | derived — §4 Form |
@@ -557,6 +583,25 @@ attack, and one layer of validation is one edit away from none. The host is deli
 rejected link does not save silently: the whole save is refused with a message naming the link, because a
 coach who sees the plan save cleanly will assume the client got it.
 
+**A consultation answer longer than 40 characters, or containing a line break, spans both columns.**
+Short factual answers (`29`, `164 cm`, `Vegetarian`) pair up two to a row; a paragraph about someone's
+injuries gets the full width. The rule is on the answer, never authored per question — the coach edits
+the Google Form freely and the layout has to keep working.
+
+**A consultation answer line becomes a link only when the whole line is an `https://` URL.**
+Google Forms file uploads (photos, bloodwork) arrive as Drive links, one per line, and the coach needs
+to open them before the call. The rule is deliberately narrow — the line is matched in full, never
+scanned for a URL inside prose — because this is untrusted input from a public endpoint and a
+`javascript:` or `data:` URL reaching an `href` is the whole attack. Same reasoning as the plan's
+Lyfta link above; the host is likewise unrestricted. Everything else renders as plain text, and
+nothing on this screen is ever `dangerouslySetInnerHTML`. Links carry `target="_blank"` and
+`rel="noopener noreferrer"` and render as an external-link icon plus **Open file**.
+
+**Consultation sections render in first-appearance order, and an answer with no section is kept.**
+Answers whose section is blank fall into a final group labelled `Form responses` rather than being
+dropped — the same rule as `Any time` for supplements below. A record whose responses predate the
+webhook is one unsectioned group.
+
 **Supplements group by timing, in first-appearance order.** Walk the coach's own ordering; each new timing string
 opens a group. Supplements with no timing fall into a final group labelled `Any time` rather than being dropped.
 
@@ -606,6 +651,8 @@ appear there and who puts it there, per §4 EmptyState.
 | — | The plan view at desktop width is the **same single column, centred at the 430px client-shell cap** — not a second layout. Client screens are phone-first and scale up; a plan is a document, and a document does not want to be 1400px wide. |
 | D-7 | The plan carries **one Lyfta programme link**, not one per training day. It is a different field from `daily_checkins.lyfta_link`: the plan link is the coach handing over the programme, the check-in link is the client logging the session they did. |
 | — | Plan totals are computed from the groups and never written to the database. Two places to change one number is how the sheet's totals went stale. |
+| D-8 | The coach's **private note on a consultation lives in its own table** (`consultation_notes`), never a column on `consultation_clients`. That table carries `consultation_clients_select_own`, so a column there would be readable by the consultation client the moment Phase 6 gives them a login — and the card says "only you can see this". |
+| D-9 | **Consultation form responses are stored as an ordered array** (`{ fields: [{section, q, a}] }`), not an object keyed by question. `jsonb` normalises object keys by length then bytewise, so an object cannot render the coach's questions back in the order they were asked. Sections come from the Google Form's page breaks, sent by the Apps Script. |
 
 ## 10. Not yet designed — ask before building
 
