@@ -99,7 +99,7 @@ Ordered. Don't skip the verification at the end.
 
 20. [ ] Point `.env.local` at the production project temporarily, then:
 ```bash
-node scripts/verify-rls.mjs          # expect 42/42
+node scripts/verify-rls.mjs          # expect 43/43
 node scripts/audit-security.mjs      # expect 0 HIGH; signup and password findings must be clear
 npm audit --omit=dev                 # expect 0 vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
@@ -179,19 +179,11 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   are what actually protect the table; the limiter only blunts volume.
 - **`TIMEZONE` is hardcoded** to `Asia/Kolkata` in `src/lib/metrics.ts`. Correct today; wrong the moment
   you coach someone in another timezone, at which point it belongs on the client record.
-- **No client can ever change their password.** There is no `auth.updateUser({ password })` call
-  anywhere in the app, no reset flow, and no "Forgot password" link on `/login`. Whatever the coach
-  sets or generates is that person's password permanently, which also means it lives indefinitely in
-  whatever channel it was sent through — a WhatsApp thread, usually. The coaching-client login card
-  on `/coach/clients/[id]` still tells the coach "They can change it later", which is not true.
-  Two separate pieces of work:
-  - **Self-service change, signed in** — `supabase.auth.updateUser({ password })` on
-    `/client/account` and an equivalent for the consultation client. Needs no email infrastructure.
-    Pair it with runbook step 9 (*Require current password when updating*) so a live session on an
-    unlocked phone cannot lock the owner out.
-  - **Forgot password, signed out** — needs `resetPasswordForEmail` plus **custom SMTP**. Supabase's
-    built-in sender is rate-limited to a handful of messages an hour and is explicitly not for
-    production.
+- **There is no "forgot password" flow.** A signed-in client can change their own password
+  (`PasswordCard` on `/client/account` and `/plan`), but someone locked *out* cannot recover on their
+  own — that needs `resetPasswordForEmail` plus **custom SMTP**, because Supabase's built-in sender is
+  rate-limited to a handful of messages an hour and is explicitly not for production. Until then,
+  recovery is manual: delete the auth user in Supabase and issue a new login.
 - **A consultation client's first password is delivered by hand.** No email is sent: the coach reads
   the generated password off the screen once and passes it on. There is no "resend" — recovery today
   means deleting the auth user in Supabase and issuing a new login.

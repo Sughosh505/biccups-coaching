@@ -7,6 +7,7 @@ import { logout } from "@/app/login/actions";
 import { Card, EmptyState } from "@/components/ui";
 import { LogOutIcon, PlanIcon } from "@/components/icons";
 import { PlanView } from "@/components/plan/PlanView";
+import { PasswordCard } from "@/components/client/PasswordCard";
 
 /**
  * The consultation client's entire app: one plan, no tab bar, nothing else
@@ -72,6 +73,12 @@ export default async function ConsultationPlanPage() {
             />
           </Card>
         )}
+      </div>
+
+      {/* This screen is the whole app for a consultation client — there is no
+          account tab to put this behind. */}
+      <div className="pt-[26px]">
+        <PasswordCard />
       </div>
     </div>
   );

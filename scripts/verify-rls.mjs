@@ -636,6 +636,38 @@ check(
   dupLinkErr ? `got ${dupLinkErr.code}` : "second link silently applied",
 );
 
+// --- a client can change their own password ----------------------------------
+// changePassword() goes through the caller's own session, never the admin API,
+// which is what subjects it to the project's password policy. Prove the new
+// password actually takes and the old one stops working — an updateUser that
+// silently no-ops would leave the client locked into a password the coach knows.
+const NEW_PASSWORD = "Verify-Changed-456!";
+const { error: shortErr } = await asClient.auth.updateUser({ password: "short" });
+const { error: changeErr } = await asClient.auth.updateUser({ password: NEW_PASSWORD });
+
+const probe = createClient(URL_, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const { error: oldStillWorks } = await probe.auth.signInWithPassword({
+  email,
+  password: PASSWORD,
+});
+await probe.auth.signOut();
+const { data: newSession, error: newFails } = await probe.auth.signInWithPassword({
+  email,
+  password: NEW_PASSWORD,
+});
+await probe.auth.signOut();
+
+check(
+  "42. client can change their own password, and the old one stops working",
+  !!shortErr && !changeErr && !!oldStillWorks && !newFails && !!newSession.session,
+  [
+    shortErr ? "short rejected" : "SHORT ACCEPTED",
+    changeErr ? `change failed: ${changeErr.message}` : "changed",
+    oldStillWorks ? "old rejected" : "OLD STILL WORKS",
+    newFails ? `new failed: ${newFails.message}` : "new works",
+  ].join(", "),
+);
+
 // --- cleanup: unlink before deleting, per the FK ------------------------------
 // Probe rows and objects go first: a leftover 2099 row collides with the unique
 // constraint on the next run and turns test 16 into a false failure.
@@ -658,7 +690,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "42. cleanup restored the client row to how it was found",
+  "43. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
