@@ -134,6 +134,12 @@ export type PlanNotes = {
   /** Exactly seven entries, Mon→Sun, or null. DESIGN.md D-5. */
   split_days: string[] | null;
   general_notes: string | null;
+  /**
+   * The coach's Lyfta programme link, which the client taps. Distinct from
+   * DailyCheckin.lyfta_link, which is the session the client logged.
+   * Always https — enforced in the server action and by a check constraint.
+   */
+  lyfta_link: string | null;
 };
 
 export type MealGroupWithFoods = PlanMealGroup & { foods: PlanMeal[] };

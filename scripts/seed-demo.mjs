@@ -331,6 +331,7 @@ async function seedPlan() {
   await supabase.from("plan_notes").insert({
     plan_id: plan.id,
     split_days: ["Upper", "Lower", "Rest", "Upper", "Lower", "Upper", "Rest"],
+    lyfta_link: "https://lyfta.app/p/demo-upper-lower",
     general_notes:
       "Cut runs until 75 kg, then we reassess. Keep steps above 8,000 on rest days — that is doing more work than you think. Log the food photo even on the days you go off plan; I would rather see it than guess.",
   });

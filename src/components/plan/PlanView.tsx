@@ -12,7 +12,7 @@ import {
   type SplitTone,
 } from "@/lib/plan";
 import { Card, EmptyState } from "@/components/ui";
-import { ClockIcon, PlanIcon } from "@/components/icons";
+import { ClockIcon, ExternalLinkIcon, PlanIcon } from "@/components/icons";
 import type { FullPlan } from "@/lib/types";
 
 /* ----------------------------------------------------------- Daily target */
@@ -165,6 +165,22 @@ const SPLIT_SWATCH: Record<SplitTone, string> = {
   rest: "bg-divider-faint",
 };
 
+function LyftaLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      // noopener stops the opened tab reaching back through window.opener;
+      // noreferrer keeps the client's plan URL out of Lyfta's referer log.
+      rel="noopener noreferrer"
+      className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+    >
+      <ExternalLinkIcon size={17} strokeWidth={2} />
+      Open workout in Lyfta
+    </a>
+  );
+}
+
 function TrainingWeek({ days }: { days: string[] | null }) {
   return (
     <Card className="rounded-[13px]">
@@ -205,8 +221,13 @@ export function PlanView({
 }: FullPlan & { coachName: string | null }) {
   const supplementGroups = groupSupplements(supplements);
   const showSplit = hasSplit(notes?.split_days);
+  const lyftaLink = notes?.lyfta_link ?? null;
   const nothingYet =
-    groups.length === 0 && supplements.length === 0 && !showSplit && !notes?.general_notes;
+    groups.length === 0 &&
+    supplements.length === 0 &&
+    !showSplit &&
+    !lyftaLink &&
+    !notes?.general_notes;
 
   if (nothingYet) {
     return (
@@ -244,9 +265,10 @@ export function PlanView({
         </Section>
       ) : null}
 
-      {showSplit ? (
+      {showSplit || lyftaLink ? (
         <Section label="Training split">
-          <TrainingWeek days={notes?.split_days ?? null} />
+          {showSplit ? <TrainingWeek days={notes?.split_days ?? null} /> : null}
+          {lyftaLink ? <LyftaLink href={lyftaLink} /> : null}
         </Section>
       ) : null}
 

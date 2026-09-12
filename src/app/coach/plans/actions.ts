@@ -78,6 +78,24 @@ type IncomingSupplement = {
 
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
+/**
+ * The client taps this link, so anything but https is refused outright —
+ * `javascript:` and `data:` hrefs are the actual attack, and plain http would
+ * send them somewhere unencrypted. Host is deliberately unrestricted.
+ * The database carries the same rule as a check constraint.
+ */
+function httpsUrl(v: unknown): { url: string | null; invalid: boolean } {
+  const raw = str(v);
+  if (raw === "") return { url: null, invalid: false };
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:") return { url: null, invalid: true };
+    return { url: parsed.toString(), invalid: false };
+  } catch {
+    return { url: null, invalid: true };
+  }
+}
+
 /** Blank stays blank — an unfilled macro is `—` in the UI, never `0`. */
 const num = (v: unknown): number | null => {
   const s = str(v);
@@ -122,13 +140,18 @@ function normalise(raw: unknown) {
     .filter((s) => s.name !== "");
 
   const splitDays = DAY_NAMES.map((_, i) => str(rawSplit[i]));
+  const lyfta = httpsUrl(input.lyfta_link);
 
   return {
-    title: str(input.title) || null,
-    groups,
-    supplements,
-    split_days: splitDays.some(Boolean) ? splitDays : null,
-    general_notes: str(input.general_notes) || null,
+    payload: {
+      title: str(input.title) || null,
+      groups,
+      supplements,
+      split_days: splitDays.some(Boolean) ? splitDays : null,
+      general_notes: str(input.general_notes) || null,
+      lyfta_link: lyfta.url,
+    },
+    badLink: lyfta.invalid,
   };
 }
 
@@ -139,16 +162,22 @@ export async function savePlan(planId: string, form: FormData) {
   const fail = (message: string) =>
     redirect(`/coach/plans/${planId}?error=${encodeURIComponent(message)}`);
 
-  let payload;
+  let normalised;
   try {
-    payload = normalise(JSON.parse(String(form.get("payload") ?? "{}")));
+    normalised = normalise(JSON.parse(String(form.get("payload") ?? "{}")));
   } catch {
     fail("That plan could not be read. Reload the page and try again.");
   }
 
+  // Refused rather than silently dropped: a coach who pastes a bad link and sees
+  // the plan save cleanly will assume the client got it.
+  if (normalised!.badLink) {
+    fail("The Lyfta link must be a full https:// address. Nothing was saved.");
+  }
+
   const { error } = await supabase.rpc("save_plan", {
     p_plan_id: planId,
-    p_payload: payload,
+    p_payload: normalised!.payload,
   });
 
   if (error) fail(reportable("Saving the plan", error));

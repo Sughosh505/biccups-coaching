@@ -311,6 +311,18 @@ label 14px `ink-2`.
 Day colours are **assigned, never authored** — see §7. A rest day's square is `--color-divider-faint` and its
 label `--color-muted-2`.
 
+#### Lyfta link — added in Phase 4
+
+Beneath the week card, inside the same `Training split` section: a full-width **Primary** button, 54px,
+radius 12px, label **Open workout in Lyfta** with a 17px external-link icon at 2.0 stroke.
+
+This is the one outbound action on the plan and the only Primary button on any client plan screen, so it
+takes accent. It renders **only when the coach has set a link**, and it survives on its own: a plan with a
+link but no split still shows the section, with the button and no week card.
+
+The anchor carries `target="_blank"` and `rel="noopener noreferrer"` — noopener stops the opened tab
+reaching back through `window.opener`, noreferrer keeps the client's plan URL out of Lyfta's referer log.
+
 ### Plan builder (coach, desktop) — added in Phase 4
 
 Two columns: a main column of Cards and a **sticky 260px right rail**, gap 16px, rail `position: sticky; top: 26px`.
@@ -327,7 +339,9 @@ Cards, in this order, each a §4 Form card:
    then ghost `+ Add supplement`. Timing is free text — never a time picker; the coach writes
    "1 hr before sleep".
 3. **Training split** — seven rows, day name 12.5px `ink-2` in a 44px column beside a 36px text input
-   whose placeholder is `Rest`.
+   whose placeholder is `Rest`. Below them, separated by a `divider` rule, a full-width 36px **Lyfta
+   workout link** field, placeholder `https://lyfta.app/…`, with an 11.5px `--color-muted-2` caption
+   stating that it must be a full `https://` address.
 4. **Notes** — a TextareaField, 5 rows.
 
 **Rail** — a Card, `padding: 14px 16px`: `.lbl` `Daily total` → mono 25px/500 kcal → a P/C/F list, each row a
@@ -537,6 +551,12 @@ from the fixed sequence `accent → info → warn`, cycling if a split has more 
 labelled `Rest` (any case) or left blank is always `--color-divider-faint` / `--color-muted-2` and never consumes
 a colour. The coach picks words, never colours — nothing in the builder offers a colour control.
 
+**The plan's Lyfta link is https-only, and a bad one fails the save.** It is refused in the server action
+and again by a database check constraint — a `javascript:` or `data:` URL reaching an `href` is the actual
+attack, and one layer of validation is one edit away from none. The host is deliberately unrestricted. A
+rejected link does not save silently: the whole save is refused with a message naming the link, because a
+coach who sees the plan save cleanly will assume the client got it.
+
 **Supplements group by timing, in first-appearance order.** Walk the coach's own ordering; each new timing string
 opens a group. Supplements with no timing fall into a final group labelled `Any time` rather than being dropped.
 
@@ -584,6 +604,7 @@ appear there and who puts it there, per §4 EmptyState.
 | D-6 | A plan is a **draft until published**, hidden from the client by RLS until then. |
 | — | Plan macros live on the **meal group** (`plan_meal_groups`), foods carry no numbers. This is D-1 implemented. |
 | — | The plan view at desktop width is the **same single column, centred at the 430px client-shell cap** — not a second layout. Client screens are phone-first and scale up; a plan is a document, and a document does not want to be 1400px wide. |
+| D-7 | The plan carries **one Lyfta programme link**, not one per training day. It is a different field from `daily_checkins.lyfta_link`: the plan link is the coach handing over the programme, the check-in link is the client logging the session they did. |
 | — | Plan totals are computed from the groups and never written to the database. Two places to change one number is how the sheet's totals went stale. |
 
 ## 10. Not yet designed — ask before building

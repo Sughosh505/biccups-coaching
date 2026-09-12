@@ -140,6 +140,7 @@ export function PlanBuilder({
     DAY_NAMES.map((_, i) => notes?.split_days?.[i] ?? ""),
   );
   const [generalNotes, setGeneralNotes] = useState(notes?.general_notes ?? "");
+  const [lyftaLink, setLyftaLink] = useState(notes?.lyfta_link ?? "");
 
   const patchGroup = (k: number, patch: Partial<GroupRow>) =>
     setGroups((rows) => rows.map((r) => (r.key === k ? { ...r, ...patch } : r)));
@@ -176,6 +177,7 @@ export function PlanBuilder({
     })),
     split_days: splitDays,
     general_notes: generalNotes,
+    lyfta_link: lyftaLink,
   });
 
   const macroRail: [string, string, number][] = [
@@ -391,6 +393,19 @@ export function PlanBuilder({
                 />
               </div>
             ))}
+
+            <div className="mt-1.5 flex flex-col gap-2 border-t border-divider pt-3.5">
+              <span className="text-[12.5px] text-ink-2">Lyfta workout link</span>
+              <TextInput
+                ariaLabel="Lyfta workout link"
+                value={lyftaLink}
+                onChange={setLyftaLink}
+                placeholder="https://lyfta.app/…"
+              />
+              <span className="text-[11.5px] text-muted-2">
+                The client taps this to open the programme. Must be a full https:// address.
+              </span>
+            </div>
           </div>
         </Card>
 

@@ -462,6 +462,25 @@ check(
 );
 
 
+// The plan Lyfta link is rendered as an href the client taps. The server action
+// refuses anything but https; this proves the database refuses it too, so the
+// rule survives someone editing the action.
+const badLinks = ["javascript:alert(1)", "data:text/html,<script>1</script>", "http://lyfta.app/p/1"];
+const accepted = [];
+for (const link of badLinks) {
+  const { error } = await admin.from("plan_notes").update({ lyfta_link: link }).eq("plan_id", myPlanId);
+  if (!error) accepted.push(link);
+}
+const { error: goodLink } = await admin
+  .from("plan_notes")
+  .update({ lyfta_link: "https://lyfta.app/p/abc123" })
+  .eq("plan_id", myPlanId);
+check(
+  "32. database refuses a non-https Lyfta link, even from the service role",
+  accepted.length === 0 && !goodLink,
+  accepted.length ? `accepted ${accepted.join(", ")}` : goodLink?.message,
+);
+
 // --- cleanup: unlink before deleting, per the FK ------------------------------
 // Probe rows and objects go first: a leftover 2099 row collides with the unique
 // constraint on the next run and turns test 16 into a false failure.
@@ -481,7 +500,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "32. cleanup restored the client row to how it was found",
+  "33. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
