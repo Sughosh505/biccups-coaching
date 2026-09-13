@@ -5,15 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireCoach } from "@/lib/auth";
-
-/**
- * Postgres error text can name columns, constraints and policies. Log it server-side
- * and hand the user something generic — never round-trip it through a query string.
- */
-function reportable(context: string, error: { message: string; code?: string }): string {
-  console.error(`[${context}] ${error.code ?? "error"}: ${error.message}`);
-  return `${context} failed. Please try again.`;
-}
+import { report } from "@/lib/report";
 
 function text(form: FormData, key: string): string | null {
   const value = form.get(key);
@@ -59,7 +51,7 @@ export async function addClient(form: FormData) {
   const { data, error } = await supabase.from("clients").insert(fields).select("id").single();
 
   if (error) {
-    redirect(`/coach/clients/new?error=${encodeURIComponent(reportable("Adding the client", error))}`);
+    redirect(`/coach/clients/new?error=${encodeURIComponent(report("Adding the client", error))}`);
   }
 
   revalidatePath("/coach", "layout");
@@ -74,7 +66,7 @@ export async function saveClient(clientId: string, form: FormData) {
 
   if (error) {
     redirect(
-      `/coach/clients/${clientId}/edit?error=${encodeURIComponent(reportable("Saving the client", error))}`,
+      `/coach/clients/${clientId}/edit?error=${encodeURIComponent(report("Saving the client", error))}`,
     );
   }
 
@@ -142,7 +134,7 @@ export async function createClientLogin(clientId: string, form: FormData) {
 
   if (profileError) {
     await admin.auth.admin.deleteUser(userId);
-    fail(reportable("Creating the login", profileError));
+    fail(report("Creating the login", profileError));
   }
 
   const { error: linkError } = await admin
@@ -153,7 +145,7 @@ export async function createClientLogin(clientId: string, form: FormData) {
   if (linkError) {
     await admin.from("profiles").delete().eq("id", userId);
     await admin.auth.admin.deleteUser(userId);
-    fail(reportable("Linking the login", linkError));
+    fail(report("Linking the login", linkError));
   }
 
   revalidatePath("/coach", "layout");
