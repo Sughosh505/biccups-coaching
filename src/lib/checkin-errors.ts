@@ -11,7 +11,7 @@ export const CHECKIN_ERRORS: Record<string, string> = {
   "bad-date": "That date is not valid.",
   "future-date": "You cannot check in for a future date.",
   "before-start": "That date is before you started coaching.",
-  "bad-link": "The workout link must start with http:// or https://",
+  "bad-link": "The workout link must be a full https:// address",
   "photo-type": "Photos must be JPEG, PNG or WebP.",
   "photo-size": "That photo is too large. Keep it under 5 MB.",
   "upload-failed": "Uploading the photo failed. Please try again.",

@@ -7,11 +7,15 @@ import { PlanIcon, PlusIcon } from "@/components/icons";
 import { PlanView } from "@/components/plan/PlanView";
 
 /**
- * The client detail "Diet & supplements" tab — the assigned plan exactly as the
- * client reads it, plus the way into the builder. Drafts show here too, badged,
- * so the coach can see work in progress the client cannot.
+ * The client detail "Plan" tab — the assigned plan exactly as the client reads
+ * it, plus the way into the builder. Drafts show here too, badged, so the coach
+ * can see work in progress the client cannot.
+ *
+ * This is the whole plan, not just the diet: meals, supplements, the training
+ * split and the Lyfta programme link all render here, so checking what a client
+ * was given never means a detour through /coach/plans.
  */
-export default async function ClientDietPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientPlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { displayName } = await requireCoach();
   const { id } = await params;
 

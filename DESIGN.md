@@ -561,7 +561,7 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/coach/clients/[id]` | coach | Client detail — Overview tab | `ClientOverview.dc.html` |
 | `/coach/clients/[id]/edit` | coach | Edit client | derived — §4 Form |
 | `/coach/clients/[id]/checkins` | coach | Client detail — Check-ins tab | `ClientCheckins.dc.html` |
-| `/coach/clients/[id]/diet` | coach | Client detail — Diet & supplements tab | `ClientPlan.dc.html` |
+| `/coach/clients/[id]/plan` | coach | Client detail — Plan tab (the client's whole plan) | `ClientPlan.dc.html` |
 | `/coach/clients/[id]/progress` | coach | Client detail — Progress tab (measurements + photos) | derived — §4 Table, §4 Form |
 | `/coach/consultations` | coach | Consultations list | derived — §4 Table |
 | `/coach/consultations/[id]` | coach | Consultation review | `ConsultationReview.dc.html` |
@@ -576,8 +576,13 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/client/account` | coaching_client | Account + sign out | derived — §4 Account |
 | `/plan` | consultation_client | Same plan view, **no tab bar** | `ClientPlan.dc.html` |
 
-Client detail tabs are fixed: **Overview · Check-ins · Diet & supplements · Workouts · Progress**.
-They deliberately mirror the coach's existing spreadsheet tabs.
+Client detail tabs are fixed: **Overview · Check-ins · Plan · Progress**.
+
+They began as a mirror of the coach's spreadsheet tabs, which had a separate *Workouts* sheet. In the
+app there is nothing for that tab to hold: the workout is a Lyfta programme link (D-7), the link lives
+on the plan, and the plan tab already renders the training split and the link beside the meals. A
+fifth tab would have duplicated half of the third. *Diet & supplements* was renamed for the same
+reason — it was already showing the training split, so the name understated it.
 
 ---
 
@@ -745,7 +750,6 @@ appear there and who puts it there, per §4 EmptyState.
 ## 10. Not yet designed — ask before building
 
 - Login screen
-- Client detail tab: Workouts
 - Loading skeletons and toast states (empty and inline error states are now specced in §4)
 - Print stylesheet for the plan view — near-black is expensive on paper; likely a light print sheet for that one
   route rather than a second theme

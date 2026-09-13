@@ -66,8 +66,12 @@ export async function submitCheckin(form: FormData) {
     fail("before-start");
   }
 
+  // https only, and no whitespace. The coach opens this link from the check-ins
+  // tab to verify the session, so it reaches an href in THEIR browser — the same
+  // reason plan_notes.lyfta_link is https-only. A database constraint refuses it
+  // too, because validation in one layer is one edit away from none.
   const lyftaLink = text(form, "lyfta_link");
-  if (lyftaLink && !/^https?:\/\//i.test(lyftaLink)) {
+  if (lyftaLink && !/^https:\/\/[^\s]+$/i.test(lyftaLink)) {
     fail("bad-link");
   }
 

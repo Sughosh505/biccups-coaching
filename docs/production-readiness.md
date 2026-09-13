@@ -105,7 +105,7 @@ Ordered. Don't skip the verification at the end.
 
 20. [ ] Point `.env.local` at the production project temporarily, then:
 ```bash
-node scripts/verify-rls.mjs          # expect 50/50
+node scripts/verify-rls.mjs          # expect 51/51
 node scripts/audit-security.mjs      # expect 0 HIGH; signup and password findings must be clear
 npm audit --omit=dev                 # expect 0 vulnerabilities
 npx tsc --noEmit && npm run lint && npm run build
