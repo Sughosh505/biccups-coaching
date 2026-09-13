@@ -4,17 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireCoach } from "@/lib/auth";
+import { report } from "@/lib/report";
 import { DAY_NAMES } from "@/lib/plan";
 import type { PlanOwnerType } from "@/lib/types";
-
-/**
- * Postgres error text names columns, constraints and policies. Log it server-side
- * and hand the user something generic.
- */
-function reportable(context: string, error: { message: string; code?: string }): string {
-  console.error(`[${context}] ${error.code ?? "error"}: ${error.message}`);
-  return `${context} failed. Please try again.`;
-}
 
 function text(form: FormData, key: string): string | null {
   const value = form.get(key);
@@ -52,7 +44,7 @@ export async function createPlan(form: FormData) {
     .select("id")
     .single();
 
-  if (error) fail(reportable("Creating the plan", error));
+  if (error) fail(report("Creating the plan", error));
 
   revalidatePath("/coach/plans");
   redirect(`/coach/plans/${data!.id}`);
@@ -180,7 +172,7 @@ export async function savePlan(planId: string, form: FormData) {
     p_payload: normalised!.payload,
   });
 
-  if (error) fail(reportable("Saving the plan", error));
+  if (error) fail(report("Saving the plan", error));
 
   revalidatePath("/coach/plans");
   revalidatePath(`/coach/plans/${planId}`, "layout");
@@ -201,7 +193,7 @@ async function setPublished(planId: string, published: boolean) {
   if (error) {
     redirect(
       `/coach/plans/${planId}?error=${encodeURIComponent(
-        reportable(published ? "Publishing the plan" : "Unpublishing the plan", error),
+        report(published ? "Publishing the plan" : "Unpublishing the plan", error),
       )}`,
     );
   }
@@ -229,7 +221,7 @@ export async function deletePlan(planId: string) {
 
   if (error) {
     redirect(
-      `/coach/plans/${planId}?error=${encodeURIComponent(reportable("Deleting the plan", error))}`,
+      `/coach/plans/${planId}?error=${encodeURIComponent(report("Deleting the plan", error))}`,
     );
   }
 

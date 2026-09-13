@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    name: Typecheck, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      # Placeholders, not secrets. Every page is server-rendered on demand, so the
+      # build never talks to Supabase — it only needs the variables to exist.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-key
+          CONSULTATION_WEBHOOK_SECRET: placeholder-webhook-secret
+
+      - name: No secret may reach the client bundle
+        run: |
+          # The real check lives in audit-security.mjs §9, which needs real keys.
+          # This is the version that works without any: nothing server-only should
+          # ever be inlined, so prove the placeholders are absent too.
+          for value in placeholder-service-key placeholder-webhook-secret; do
+            if grep -rl "$value" .next/static 2>/dev/null; then
+              echo "::error::$value reached the client bundle"
+              exit 1
+            fi
+          done
+          echo "clean"
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    # Runs only where the dev-project secrets are available. A fork without them
+    # skips rather than failing, so a missing secret never reads as a clean run.
+    if: github.event_name == 'push' && github.repository == 'Sughosh505/biccups-coaching'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Write .env.local from repository secrets
+        env:
+          URL: ${{ secrets.DEV_SUPABASE_URL }}
+          ANON: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
+          SERVICE: ${{ secrets.DEV_SUPABASE_SERVICE_ROLE_KEY }}
+          WEBHOOK: ${{ secrets.DEV_CONSULTATION_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SERVICE" ]; then
+            echo "::warning::Supabase secrets are not configured — skipping the audit."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
+            echo "CONSULTATION_WEBHOOK_SECRET=$WEBHOOK"
+          } > .env.local
+
+      # audit-security §9 greps the build output for leaked secrets, so it needs one.
+      - name: Build
+        if: env.SKIP != '1'
+        run: npm run build
+
+      - name: Audit
+        if: env.SKIP != '1'
+        run: node scripts/audit-security.mjs
+
+# verify-rls.mjs is deliberately NOT here. It needs a running server AND it
+# creates, mutates and deletes real rows and auth users in the dev project. Two
+# overlapping CI runs would race each other through the same database and the
+# failures would look like security regressions rather than collisions. It stays
+# a manual gate, run at the end of a phase and before a release.

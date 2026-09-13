@@ -172,10 +172,20 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   without enforcing. The audit script probes an actually-breached password rather than trusting the setting.
 - **Password composition rules are deliberately off.** NIST SP 800-63B recommends *against* them —
   forcing a symbol pushes people to `Password1!`. Length plus breach-checking does the real work.
-- **No error monitoring.** A production exception is currently invisible to you. Wire up Sentry, or at
-  minimum read Vercel's function logs, before real clients depend on this.
-- **No automated tests or CI.** Both scripts are manual. A GitHub Action running typecheck, lint, build
-  and `audit-security.mjs` on every push would close this.
+- **No error monitoring service.** Nothing pushes a failure to you — you still have to go and look.
+  What changed: errors now log as one line of JSON (`"event":"app_error"`) so Vercel's log search can
+  filter by context and code, and `error.tsx` logs and displays the error `digest`, which is the only
+  handle shared between the page a client saw and the stack trace in the logs. Wiring up Sentry is
+  still the fix; this makes the interim survivable.
+- ~~**No automated tests or CI**~~ — **partly closed.** `.github/workflows/ci.yml` runs typecheck,
+  lint, build and a bundle-leak check on every push, plus `audit-security.mjs` where the dev-project
+  secrets are configured. Set `DEV_SUPABASE_URL`, `DEV_SUPABASE_ANON_KEY`,
+  `DEV_SUPABASE_SERVICE_ROLE_KEY` and `DEV_CONSULTATION_WEBHOOK_SECRET` as repository secrets to
+  enable that job; without them it skips loudly rather than passing quietly.
+  **`verify-rls.mjs` is deliberately excluded**: it needs a running server and it creates, mutates and
+  deletes real rows and auth users in the shared dev project, so two overlapping runs would race each
+  other and the failures would read as security regressions rather than collisions. It stays a manual
+  gate, run at the end of a phase and before a release. There are still no unit tests.
 - **No rate limiting on the login form** beyond Supabase's built-in auth limits.
 - **The consultation webhook's rate limiter is in-memory, so it is per-instance.** `/api/consultation-intake`
   allows 10 requests per minute per IP, held in a `Map` in the route module. On Vercel each serverless

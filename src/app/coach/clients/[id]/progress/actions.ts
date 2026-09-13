@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireCoach } from "@/lib/auth";
+import { report } from "@/lib/report";
 import { PROGRESS_BUCKET } from "@/lib/queries/progress";
 import { MEASUREMENT_SITES } from "@/lib/types";
 
@@ -15,11 +16,6 @@ import { MEASUREMENT_SITES } from "@/lib/types";
  * these writes, so the service role is not involved on this path at all —
  * requireCoach() guards the role and RLS enforces it a second time.
  */
-
-function reportable(context: string, error: { message: string; code?: string }): string {
-  console.error(`[${context}] ${error.code ?? "error"}: ${error.message}`);
-  return `${context} failed. Please try again.`;
-}
 
 function back(clientId: string, params: string): never {
   redirect(`/coach/clients/${clientId}/progress?${params}`);
@@ -71,7 +67,7 @@ export async function saveMeasurement(clientId: string, form: FormData) {
     .from("measurements")
     .upsert({ client_id: clientId, date, ...sites }, { onConflict: "client_id,date" });
 
-  if (error) back(clientId, `error=${encodeURIComponent(reportable("Saving the measurement", error))}`);
+  if (error) back(clientId, `error=${encodeURIComponent(report("Saving the measurement", error))}`);
 
   revalidatePath(`/coach/clients/${clientId}`, "layout");
   back(clientId, "saved=measurement");
@@ -83,7 +79,7 @@ export async function deleteMeasurement(clientId: string, measurementId: string)
 
   const { error } = await supabase.from("measurements").delete().eq("id", measurementId);
 
-  if (error) back(clientId, `error=${encodeURIComponent(reportable("Deleting the measurement", error))}`);
+  if (error) back(clientId, `error=${encodeURIComponent(report("Deleting the measurement", error))}`);
 
   revalidatePath(`/coach/clients/${clientId}`, "layout");
   back(clientId, "saved=measurement-deleted");
@@ -136,7 +132,7 @@ export async function uploadProgressPhotos(clientId: string, form: FormData) {
       // Roll back the objects already written, or a failed batch leaves orphans
       // in the bucket that no row points at and nothing will ever clean up.
       if (uploaded.length) await supabase.storage.from(PROGRESS_BUCKET).remove(uploaded);
-      back(clientId, `error=${encodeURIComponent(reportable("Uploading the photos", uploadError))}`);
+      back(clientId, `error=${encodeURIComponent(report("Uploading the photos", uploadError))}`);
     }
     uploaded.push(objectPath);
   }
@@ -147,7 +143,7 @@ export async function uploadProgressPhotos(clientId: string, form: FormData) {
 
   if (error) {
     await supabase.storage.from(PROGRESS_BUCKET).remove(uploaded);
-    back(clientId, `error=${encodeURIComponent(reportable("Saving the photos", error))}`);
+    back(clientId, `error=${encodeURIComponent(report("Saving the photos", error))}`);
   }
 
   revalidatePath(`/coach/clients/${clientId}`, "layout");
@@ -167,7 +163,7 @@ export async function deleteProgressPhoto(clientId: string, photoId: string) {
 
   const { error } = await supabase.from("progress_photos").delete().eq("id", photoId);
 
-  if (error) back(clientId, `error=${encodeURIComponent(reportable("Deleting the photo", error))}`);
+  if (error) back(clientId, `error=${encodeURIComponent(report("Deleting the photo", error))}`);
 
   if (photo?.photo_url) {
     await supabase.storage.from(PROGRESS_BUCKET).remove([photo.photo_url as string]);

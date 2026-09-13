@@ -6,15 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireCoach } from "@/lib/auth";
-
-/**
- * Postgres error text can name columns, constraints and policies. Log it server-side
- * and hand the user something generic — never round-trip it through a query string.
- */
-function reportable(context: string, error: { message: string; code?: string }): string {
-  console.error(`[${context}] ${error.code ?? "error"}: ${error.message}`);
-  return `${context} failed. Please try again.`;
-}
+import { report } from "@/lib/report";
 
 /**
  * Both actions write through the coach's OWN session, not createAdminClient() — the
@@ -34,7 +26,7 @@ export async function markConsulted(consultationId: string) {
   if (error) {
     redirect(
       `/coach/consultations/${consultationId}?error=${encodeURIComponent(
-        reportable("Marking the consultation", error),
+        report("Marking the consultation", error),
       )}`,
     );
   }
@@ -63,7 +55,7 @@ export async function saveConsultationNote(consultationId: string, form: FormDat
   if (error) {
     redirect(
       `/coach/consultations/${consultationId}?error=${encodeURIComponent(
-        reportable("Saving the note", error),
+        report("Saving the note", error),
       )}`,
     );
   }
@@ -167,7 +159,7 @@ export async function createConsultationLogin(
 
   if (profileError) {
     await admin.auth.admin.deleteUser(userId);
-    return { ok: false, error: reportable("Creating the login", profileError) };
+    return { ok: false, error: report("Creating the login", profileError) };
   }
 
   const { error: linkError } = await admin
@@ -178,7 +170,7 @@ export async function createConsultationLogin(
   if (linkError) {
     await admin.from("profiles").delete().eq("id", userId);
     await admin.auth.admin.deleteUser(userId);
-    return { ok: false, error: reportable("Linking the login", linkError) };
+    return { ok: false, error: report("Linking the login", linkError) };
   }
 
   revalidatePath(`/coach/consultations/${consultationId}`);
