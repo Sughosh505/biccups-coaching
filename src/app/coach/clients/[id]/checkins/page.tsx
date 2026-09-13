@@ -97,14 +97,43 @@ function CheckinRow({ checkin }: { checkin: DailyCheckin }) {
           strokeWidth={1.8}
           className={checkin.diet_photo_url ? "text-muted" : "text-border"}
         />
-        <DumbbellIcon
-          size={15}
-          strokeWidth={1.8}
-          className={checkin.lyfta_link && !checkin.rest_day ? "text-muted" : "text-border"}
-        />
+        {sessionLink(checkin.lyfta_link) && !checkin.rest_day ? (
+          <a
+            href={sessionLink(checkin.lyfta_link) as string}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open the logged session in Lyfta"
+            aria-label={`Open the Lyfta session logged on ${checkin.date}`}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-accent"
+          >
+            <DumbbellIcon size={15} strokeWidth={1.8} />
+          </a>
+        ) : (
+          <span className="flex h-6 w-6 items-center justify-center">
+            <DumbbellIcon size={15} strokeWidth={1.8} className="text-border" />
+          </span>
+        )}
       </span>
     </div>
   );
+}
+
+/**
+ * The client typed this link. It is validated https-only in the check-in action
+ * and again by a database constraint, and checked a third time here before it
+ * reaches an href — the same whole-string rule the consultation review uses.
+ * Three layers because the coach clicks this, and it is their session at stake.
+ */
+function sessionLink(raw: string | null): string | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  if (/\s/.test(value) || !value.toLowerCase().startsWith("https://")) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname !== "" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 function MissingRow({ date }: { date: string }) {

@@ -136,7 +136,7 @@ export async function getPlanSummaries(): Promise<PlanSummary[]> {
       // A plan whose owner was deleted still lists, and says so — a row that
       // silently vanishes is how orphans go unnoticed.
       ownerName: name ?? "Deleted client",
-      ownerHref: name && coaching ? `/coach/clients/${plan.owner_id}/diet` : null,
+      ownerHref: name && coaching ? `/coach/clients/${plan.owner_id}/plan` : null,
       meals: mealCounts.get(plan.id) ?? 0,
       supplements: supplementCounts.get(plan.id) ?? 0,
     };
@@ -198,7 +198,7 @@ export async function getPlanOwner(
     name: (data?.name as string | null) ?? "Deleted client",
     href: data
       ? coaching
-        ? `/coach/clients/${ownerId}/diet`
+        ? `/coach/clients/${ownerId}/plan`
         : `/coach/consultations/${ownerId}`
       : null,
     consultation: !coaching,

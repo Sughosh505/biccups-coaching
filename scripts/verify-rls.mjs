@@ -757,6 +757,37 @@ check(
   ].join(", "),
 );
 
+// --- the check-in's Lyfta link is an href too ---------------------------------
+// The coach opens the client's logged session from the check-ins tab to verify
+// what was lifted, so a CLIENT-SUBMITTED string now reaches an href in the
+// coach's browser. Test 32 proves the same rule for the plan link the client
+// taps; this is the same attack pointed the other way, at the better target.
+const badSessionLinks = [
+  "javascript:alert(1)",
+  "data:text/html,<script>1</script>",
+  "http://lyfta.app/session/1",
+  "https://lyfta.app/a b",
+];
+const acceptedSession = [];
+for (const link of badSessionLinks) {
+  const { error } = await admin
+    .from("daily_checkins")
+    .update({ lyfta_link: link })
+    .eq("client_id", mine.id)
+    .eq("date", PROBE_OWN_DATE);
+  if (!error) acceptedSession.push(link);
+}
+const { error: goodSession } = await admin
+  .from("daily_checkins")
+  .update({ lyfta_link: "https://lyfta.app/session/abc123" })
+  .eq("client_id", mine.id)
+  .eq("date", PROBE_OWN_DATE);
+check(
+  "50. database refuses a non-https check-in Lyfta link, even from the service role",
+  acceptedSession.length === 0 && !goodSession,
+  acceptedSession.length ? `accepted ${acceptedSession.join(", ")}` : goodSession?.message,
+);
+
 // --- cleanup: unlink before deleting, per the FK ------------------------------
 // Probe rows and objects go first: a leftover 2099 row collides with the unique
 // constraint on the next run and turns test 16 into a false failure.
@@ -780,7 +811,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "50. cleanup restored the client row to how it was found",
+  "51. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
