@@ -95,6 +95,8 @@ export type ConsultationClient = {
   form_response_id: string | null;
   status: "new" | "consulted" | "converted" | null;
   consulted_at: string | null;
+  /** When the coach handed over the view-only login. Null until they do. */
+  login_sent_at: string | null;
   converted_to_client_id: string | null;
   created_at: string;
 };

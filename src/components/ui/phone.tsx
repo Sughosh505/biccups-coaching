@@ -18,10 +18,12 @@ export function PhoneField({
   inputMode,
   hint,
   compact,
+  autoComplete,
+  required,
 }: {
   label: string;
   name: string;
-  type?: "number" | "time" | "url" | "text";
+  type?: "number" | "time" | "url" | "text" | "password";
   defaultValue?: string | number | null;
   placeholder?: string;
   suffix?: string;
@@ -29,6 +31,8 @@ export function PhoneField({
   inputMode?: "numeric" | "decimal" | "url" | "text";
   hint?: string;
   compact?: boolean;
+  autoComplete?: string;
+  required?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-2">
@@ -43,6 +47,8 @@ export function PhoneField({
           type={type}
           step={step}
           inputMode={inputMode}
+          autoComplete={autoComplete}
+          required={required}
           placeholder={placeholder}
           defaultValue={defaultValue ?? undefined}
           className={`tnum w-full min-w-0 bg-transparent font-medium tracking-[-0.01em] text-ink outline-none placeholder:text-faint ${

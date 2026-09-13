@@ -5,6 +5,7 @@ import { getConsultationDetail } from "@/lib/queries/consultation";
 import { parseFormResponses } from "@/lib/consultation";
 import { markConsulted, saveConsultationNote } from "@/app/coach/consultations/actions";
 import { ConsultationPipeline, type PipelineStep } from "@/components/coach/ConsultationPipeline";
+import { ConsultationLoginCard } from "@/components/coach/ConsultationLoginCard";
 import {
   Avatar,
   Button,
@@ -77,9 +78,11 @@ export default async function ConsultationReviewPage({
       date: plan ? longDate(plan.created_at) : null,
       done: plan !== null,
     },
-    // No timestamp exists for this one — auth_user_id records THAT a login exists,
-    // not when it was sent. Phase 6 owns provisioning and can add the date.
-    { label: "View-only login sent", date: null, done: consultation.auth_user_id !== null },
+    {
+      label: "View-only login sent",
+      date: consultation.login_sent_at ? longDate(consultation.login_sent_at) : null,
+      done: consultation.auth_user_id !== null,
+    },
   ];
 
   return (
@@ -196,6 +199,14 @@ export default async function ConsultationReviewPage({
                 </Card>
               ))
             )}
+
+            <ConsultationLoginCard
+              consultationId={consultation.id}
+              name={consultation.name}
+              email={consultation.email}
+              hasLogin={consultation.auth_user_id !== null}
+              hasPublishedPlan={plan?.published_at != null}
+            />
           </div>
 
           <div className="flex flex-col gap-3.5">

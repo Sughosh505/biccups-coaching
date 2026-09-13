@@ -385,6 +385,22 @@ answer 13.5px/1.5 `ink`.
 
 Answers render as **text only** — this is untrusted input from a public endpoint, so never as markup.
 
+### Provisioning card (login) — added in Phase 6
+
+The `Client login` card on `/coach/clients/[id]` and the `View-only login` card at the foot of
+`/coach/consultations/[id]` are **one component shape**, not two designs. Full-width Card, header
+carrying a 15px `KeyIcon` in `--color-muted-2`. Three states:
+
+1. **Not provisioned** — a 13px `--color-muted` paragraph saying what the login lets them do, an
+   `Email` Field (280px, pre-filled from the record) and a primary button on the same row.
+   A blocking prerequisite that is merely *missing* renders above the row as 12.5px `--color-warn`
+   and never disables the button — the coach decides, the UI only warns.
+2. **Just created** (consultation only) — the generated password in mono 17px `ink` on an accent-tint
+   panel (accent 12% fill, accent 32% border, radius 8px) under a `.lbl`, beside a secondary `Copy`
+   button, over a 12.5px `--color-muted` line stating it is shown once and how to recover if lost.
+3. **Active** — one row: `Login active for {email}` in 13px `ink-2`, with where they sign in and what
+   they see in 12.5px `--color-muted-2` on the right.
+
 ### Slider (1–10 scales)
 
 Row is **44px tall**. Track 6px, radius 4px, `background: divider-faint`. Fill accent. Thumb 26px circle, accent,
@@ -428,6 +444,21 @@ between) → a full-width **Secondary** button, 50px, radius 12px, labelled **Si
 
 **Sign out is Secondary, never Primary.** Accent is the positive/on-track colour (§1); putting a
 destructive, session-ending action in it misreads as encouragement.
+
+### Change password (phone) — added in Phase 6
+
+A bordered section (`surface`, 1px `border`, radius 13px, `padding: 16px`) sitting above Sign out on
+`/client/account`, and at the foot of `/plan` — the consultation client has no account screen, and one
+field does not justify inventing a second route for a deliberately single-screen app.
+
+Header row: 15px `LockIcon` in `--color-muted-2` + **Change password** 13.5px/500 `ink`. Then two
+54px §4 Number fields (`type="password"`, `autocomplete="new-password"`) — New password, carrying the
+minimum as its placeholder, and Confirm — over a full-width 50px **Secondary** button.
+
+Like Sign out, the button is Secondary: accent is the on-track colour, not the colour of account
+admin. On success the whole form is **replaced** by one accent line with a check icon, so there is no
+stale password sitting in an input behind a success message. Errors render above the fields in the
+§4 Form error style.
 
 ### Bottom tab bar (phone)
 
@@ -588,6 +619,13 @@ Short factual answers (`29`, `164 cm`, `Vegetarian`) pair up two to a row; a par
 injuries gets the full width. The rule is on the answer, never authored per question — the coach edits
 the Google Form freely and the layout has to keep working.
 
+**A generated password is shown exactly once, and never travels in a URL.**
+The consultation login's password is returned by the server action and rendered from component state,
+never passed through `redirect(...?password=)` — a query string puts a live credential into the
+address bar, browser history, the referer header and every access log in between. It is never stored
+in the database and never shown again; a lost password is recovered by deleting the account and
+issuing a new one. This is why that one card is a client component.
+
 **A consultation answer line becomes a link only when the whole line is an `https://` URL.**
 Google Forms file uploads (photos, bloodwork) arrive as Drive links, one per line, and the coach needs
 to open them before the call. The rule is deliberately narrow — the line is matched in full, never
@@ -652,6 +690,7 @@ appear there and who puts it there, per §4 EmptyState.
 | D-7 | The plan carries **one Lyfta programme link**, not one per training day. It is a different field from `daily_checkins.lyfta_link`: the plan link is the coach handing over the programme, the check-in link is the client logging the session they did. |
 | — | Plan totals are computed from the groups and never written to the database. Two places to change one number is how the sheet's totals went stale. |
 | D-8 | The coach's **private note on a consultation lives in its own table** (`consultation_notes`), never a column on `consultation_clients`. That table carries `consultation_clients_select_own`, so a column there would be readable by the consultation client the moment Phase 6 gives them a login — and the card says "only you can see this". |
+| D-10 | The consultation login's first password is **generated, not typed**, and shown once. The admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on their own screen. |
 | D-9 | **Consultation form responses are stored as an ordered array** (`{ fields: [{section, q, a}] }`), not an object keyed by question. `jsonb` normalises object keys by length then bytewise, so an object cannot render the coach's questions back in the order they were asked. Sections come from the Google Form's page breaks, sent by the Apps Script. |
 
 ## 10. Not yet designed — ask before building

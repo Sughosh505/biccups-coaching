@@ -210,7 +210,7 @@ export default async function ClientOverviewPage({
             <p className="max-w-[620px] text-[13px] leading-relaxed text-muted">
               Create a login so {client.name ?? "this client"} can submit daily check-ins. You set the
               first password and pass it to them directly — there is no email sent. They can change it
-              later.
+              themselves from their account screen.
             </p>
             <div className="flex items-end gap-3">
               <div className="w-[280px]">

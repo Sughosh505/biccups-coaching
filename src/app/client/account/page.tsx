@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireClient } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
+import { PasswordCard } from "@/components/client/PasswordCard";
 import { daysBetween, formatShortDate, today } from "@/lib/metrics";
 import { Avatar, Card } from "@/components/ui";
 import { ChevronLeftIcon, LogOutIcon } from "@/components/icons";
@@ -58,6 +59,8 @@ export default async function ClientAccountPage() {
             ))}
           </div>
         </Card>
+
+        <PasswordCard />
 
         <div className="flex flex-col gap-3">
           <form action={logout}>

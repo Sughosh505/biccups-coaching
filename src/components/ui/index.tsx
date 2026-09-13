@@ -62,17 +62,24 @@ export function Button({
   type = "button",
   disabled,
   className = "",
+  onClick,
+  "aria-label": ariaLabel,
 }: {
   variant?: ButtonVariant;
   children: React.ReactNode;
   type?: "button" | "submit";
   disabled?: boolean;
   className?: string;
+  /** Only usable from a client component — a server component cannot pass one. */
+  onClick?: () => void;
+  "aria-label"?: string;
 }) {
   return (
     <button
       type={type}
       disabled={disabled}
+      onClick={onClick}
+      aria-label={ariaLabel}
       className={`inline-flex items-center justify-center gap-1.5 text-[13px] transition-colors disabled:opacity-50 ${BUTTON_STYLES[variant]} ${className}`}
     >
       {children}
