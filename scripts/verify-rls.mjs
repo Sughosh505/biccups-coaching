@@ -636,6 +636,95 @@ check(
   dupLinkErr ? `got ${dupLinkErr.code}` : "second link silently applied",
 );
 
+// --- storage: the progress photo bucket (Phase 7) ----------------------------
+// Deliberately a DIFFERENT shape from daily-photos. There the client uploads
+// their own diet photo, so the client policy is `for all`. Here the coach takes
+// the photos and the client only looks at them, so a client write must fail even
+// inside their own folder — that is the assertion worth making.
+const PROGRESS_BUCKET = "progress-photos";
+const progressOwn = `${mine.id}/verify-${stamp}.jpg`;
+const progressTheirs = `${theirs.id}/verify-${stamp}.jpg`;
+
+// Every assertion below fails closed when the bucket is simply absent, which
+// would let a missing migration read as five passing security checks. Establish
+// the precondition explicitly instead.
+const { data: buckets } = await admin.storage.listBuckets();
+const progressBucket = (buckets ?? []).find((b) => b.name === PROGRESS_BUCKET);
+check(
+  "42. the progress-photos bucket exists and is private",
+  !!progressBucket && progressBucket.public === false,
+  progressBucket ? `public: ${progressBucket.public}` : "bucket not found — run the phase 7 migration",
+);
+
+const { error: progressOwnWrite } = await asClient.storage
+  .from(PROGRESS_BUCKET)
+  .upload(progressOwn, jpeg(), { contentType: "image/jpeg" });
+check(
+  "43. client CANNOT upload a progress photo, even into their own folder",
+  !!progressOwnWrite,
+  progressOwnWrite ? "" : "upload succeeded",
+);
+
+await admin.storage.from(PROGRESS_BUCKET).upload(progressOwn, jpeg(), {
+  contentType: "image/jpeg",
+});
+await admin.storage.from(PROGRESS_BUCKET).upload(progressTheirs, jpeg(), {
+  contentType: "image/jpeg",
+});
+
+const { error: progressOwnRead } = await asClient.storage
+  .from(PROGRESS_BUCKET)
+  .download(progressOwn);
+check(
+  "44. client CAN read their own progress photo",
+  !progressOwnRead,
+  progressOwnRead?.message,
+);
+
+const { error: progressCrossRead } = await asClient.storage
+  .from(PROGRESS_BUCKET)
+  .download(progressTheirs);
+check(
+  "45. client CANNOT read another client's progress photo",
+  !!progressCrossRead,
+  progressCrossRead ? "" : "download succeeded",
+);
+
+const { error: progressDelete } = await asClient.storage
+  .from(PROGRESS_BUCKET)
+  .remove([progressOwn]);
+const { data: stillThere } = await admin.storage
+  .from(PROGRESS_BUCKET)
+  .download(progressOwn);
+check(
+  "46. client CANNOT delete their own progress photo",
+  !!stillThere,
+  progressDelete ? "" : "remove reported success",
+);
+
+const progressRaw = await fetch(`${URL_}/storage/v1/object/public/${PROGRESS_BUCKET}/${progressOwn}`);
+check(
+  "47. progress photos are not readable without a signed URL",
+  progressRaw.status !== 200,
+  `status ${progressRaw.status}`,
+);
+
+// A client must not be able to fabricate a measurement or a photo row for
+// themselves either — both tables are coach-write, client-read.
+const { error: measureWrite } = await asClient
+  .from("measurements")
+  .insert({ client_id: mine.id, date: "2099-03-03", waist: 1 });
+const { data: measureAfter } = await admin
+  .from("measurements")
+  .select("id")
+  .eq("client_id", mine.id)
+  .eq("date", "2099-03-03");
+check(
+  "48. client CANNOT record their own measurements",
+  (measureAfter?.length ?? 0) === 0,
+  measureWrite ? "" : "insert silently applied",
+);
+
 // --- a client can change their own password ----------------------------------
 // changePassword() goes through the caller's own session, never the admin API,
 // which is what subjects it to the project's password policy. Prove the new
@@ -658,7 +747,7 @@ const { data: newSession, error: newFails } = await probe.auth.signInWithPasswor
 await probe.auth.signOut();
 
 check(
-  "42. client can change their own password, and the old one stops working",
+  "49. client can change their own password, and the old one stops working",
   !!shortErr && !changeErr && !!oldStillWorks && !newFails && !!newSession.session,
   [
     shortErr ? "short rejected" : "SHORT ACCEPTED",
@@ -673,6 +762,7 @@ check(
 // constraint on the next run and turns test 16 into a false failure.
 await admin.from("daily_checkins").delete().in("date", [PROBE_OWN_DATE, PROBE_CROSS_DATE]);
 await admin.storage.from(BUCKET).remove([ownPath, theirPath]);
+await admin.storage.from(PROGRESS_BUCKET).remove([progressOwn, progressTheirs]);
 await admin.from("plans").delete().in("id", created_plans);
 // The webhook probes write real rows through the real route. consultation_notes
 // cascades from consultation_clients, so the private note goes with the record.
@@ -690,7 +780,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "43. cleanup restored the client row to how it was found",
+  "50. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );

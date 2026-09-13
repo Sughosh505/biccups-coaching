@@ -11,7 +11,7 @@ const TABS = [
   { label: "Check-ins", href: "/checkins", ready: true },
   { label: "Diet & supplements", href: "/diet", ready: true },
   { label: "Workouts", href: "/workouts", ready: false },
-  { label: "Progress", href: "/progress", ready: false },
+  { label: "Progress", href: "/progress", ready: true },
 ];
 
 export function ClientTabs({ clientId }: { clientId: string }) {

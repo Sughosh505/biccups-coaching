@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { requireClient } from "@/lib/auth";
 import { getClientDashboard } from "@/lib/queries/client";
-import { daysBetween, today } from "@/lib/metrics";
+import { getOwnProgress } from "@/lib/queries/progress";
+import { daysBetween, formatShortDate, today } from "@/lib/metrics";
 import { Avatar, Card, EmptyState, WeekSquares, toneText } from "@/components/ui";
 import { AlertTriangleIcon, ImageIcon, InfoIcon } from "@/components/icons";
 import { CutCard } from "@/components/client/CutCard";
+import { MEASUREMENT_SITES } from "@/lib/types";
 
 function weekdayName(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
@@ -18,6 +20,8 @@ export default async function ClientProgressPage() {
   const { client } = await requireClient();
   const now = today();
   const dashboard = await getClientDashboard(client, now, now);
+  const { measurements, photoDays } = await getOwnProgress();
+  const latestMeasurement = measurements[0];
 
   const loggedThisWeek = dashboard.week.filter((d) => d.state === "logged").length;
   const elapsedThisWeek = dashboard.week.filter((d) => d.state !== "future").length;
@@ -94,28 +98,109 @@ export default async function ClientProgressPage() {
           </div>
         </Card>
 
-        {/* Measurements — Phase 7 */}
+        {/* Measurements — read-only, coach-entered (D-2) */}
         <Card className="rounded-[13px]">
           <div className="flex items-center justify-between border-b border-divider px-4 py-3.5">
             <span className="sec">Measurements</span>
+            {latestMeasurement ? (
+              <span className="tnum text-[12px] text-muted-2">
+                {formatShortDate(latestMeasurement.measurement.date)}
+              </span>
+            ) : null}
           </div>
-          <EmptyState
-            icon={<InfoIcon size={24} />}
-            title="No measurements recorded yet"
-            hint="Your coach records arms, chest, waist, hip and thighs on a date. They appear here, with the change since last time, as soon as the first set is taken."
-          />
+          {!latestMeasurement ? (
+            <EmptyState
+              icon={<InfoIcon size={24} />}
+              title="No measurements recorded yet"
+              hint="Your coach records arms, chest, waist, hip and thighs on a date. They appear here, with the change since last time, as soon as the first set is taken."
+            />
+          ) : (
+            <div className="px-4 pb-3 pt-1">
+              {MEASUREMENT_SITES.map(([key, label]) => {
+                const value = latestMeasurement.measurement[key];
+                const change = latestMeasurement.deltas[key];
+                const moved = change != null && Math.abs(change) >= 0.05;
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between border-b border-divider-soft py-2.5 last:border-0"
+                  >
+                    <span className="text-[13.5px] text-muted">{label}</span>
+                    <span className="flex items-baseline gap-2">
+                      <span className="tnum text-[14px] font-medium text-ink">
+                        {value == null ? "—" : `${value} cm`}
+                      </span>
+                      {moved ? (
+                        <span className="tnum text-[12px] text-muted-2">
+                          {change > 0 ? "+" : "−"}
+                          {Math.abs(change).toFixed(1)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                );
+              })}
+              {measurements.length > 1 ? (
+                <span className="block pt-2 text-[12px] text-muted-2">
+                  Change shown against {formatShortDate(measurements[1].measurement.date)}.
+                </span>
+              ) : null}
+            </div>
+          )}
         </Card>
 
-        {/* Progress photos — Phase 7 */}
+        {/* Progress photos — freeform, any number per date (D-3) */}
         <Card className="rounded-[13px]">
           <div className="flex items-center justify-between border-b border-divider px-4 py-3.5">
             <span className="sec">Progress photos</span>
+            {photoDays.length ? (
+              <span className="tnum text-[12px] text-muted-2">{photoDays.length} dates</span>
+            ) : null}
           </div>
-          <EmptyState
-            icon={<ImageIcon size={24} />}
-            title="No progress photos yet"
-            hint="Dated photo sets show up here so you can compare where you started against where you are now."
-          />
+          {photoDays.length === 0 ? (
+            <EmptyState
+              icon={<ImageIcon size={24} />}
+              title="No progress photos yet"
+              hint="Dated photo sets show up here so you can compare where you started against where you are now."
+            />
+          ) : (
+            <div className="flex flex-col gap-4 p-4">
+              {photoDays.map((day) => (
+                <div key={day.date} className="flex flex-col gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="tnum text-[13.5px] font-medium text-ink">
+                      {formatShortDate(day.date)}
+                    </span>
+                    {day.photos[0]?.notes ? (
+                      <span className="text-[12px] text-muted-2">{day.photos[0].notes}</span>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto">
+                    {day.photos.map((photo) => (
+                      <span
+                        key={photo.id}
+                        className="h-[168px] w-[124px] shrink-0 overflow-hidden rounded-[11px] border border-border bg-sunken"
+                      >
+                        {photo.url ? (
+                          // Signed URL, expires in 120s — nothing for next/image to cache.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={photo.url}
+                            alt={`Your progress photo from ${day.date}`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full items-center justify-center">
+                            <ImageIcon size={20} className="text-border-strong" />
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>
