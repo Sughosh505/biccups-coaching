@@ -4,6 +4,11 @@ import type { Tone } from "@/lib/metrics";
 
 /* ---------------------------------------------------------------- Card */
 
+/**
+ * `print:break-inside-avoid` is on the base class deliberately: a card split
+ * across a page boundary is the main way a printed plan goes wrong, and that is
+ * never what you want for any card — DESIGN.md §4 Print sheet.
+ */
 export function Card({
   children,
   className = "",
@@ -13,7 +18,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-[10px] border border-border bg-surface ${className}`}
+      className={`overflow-hidden rounded-[10px] border border-border bg-surface print:break-inside-avoid ${className}`}
     >
       {children}
     </div>

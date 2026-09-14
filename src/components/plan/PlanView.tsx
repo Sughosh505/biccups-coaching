@@ -165,6 +165,12 @@ const SPLIT_SWATCH: Record<SplitTone, string> = {
   rest: "bg-divider-faint",
 };
 
+/**
+ * The one element that changes shape in print rather than disappearing
+ * (DESIGN.md §4 Print sheet). A 54px lime button is meaningless on paper, but
+ * Chrome's Save-as-PDF preserves the href as a live link — so printed it becomes
+ * a labelled URL: readable on paper, still tappable in the PDF.
+ */
 function LyftaLink({ href }: { href: string }) {
   return (
     <a
@@ -173,10 +179,12 @@ function LyftaLink({ href }: { href: string }) {
       // noopener stops the opened tab reaching back through window.opener;
       // noreferrer keeps the client's plan URL out of Lyfta's referer log.
       rel="noopener noreferrer"
-      className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+      className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover print:h-auto print:flex-col print:items-start print:gap-1 print:rounded-none print:bg-transparent print:text-[13px] print:font-normal print:text-ink-2"
     >
-      <ExternalLinkIcon size={17} strokeWidth={2} />
-      Open workout in Lyfta
+      <ExternalLinkIcon size={17} strokeWidth={2} className="print:hidden" />
+      <span className="print:hidden">Open workout in Lyfta</span>
+      <span className="hidden print:block">Your workout programme in Lyfta:</span>
+      <span className="tnum hidden break-all text-[11.5px] text-muted-2 print:block">{href}</span>
     </a>
   );
 }

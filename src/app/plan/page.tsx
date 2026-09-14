@@ -7,6 +7,8 @@ import { logout } from "@/app/login/actions";
 import { Card, EmptyState } from "@/components/ui";
 import { LogOutIcon, PlanIcon } from "@/components/icons";
 import { PlanView } from "@/components/plan/PlanView";
+import { PlanPrintHeader } from "@/components/plan/PlanPrintHeader";
+import { PrintButton } from "@/components/plan/PrintButton";
 import { PasswordCard } from "@/components/client/PasswordCard";
 
 /**
@@ -44,26 +46,37 @@ export default async function ConsultationPlanPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-5 pb-8 pt-[26px]">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex items-start justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-1.5">
           <h1 className="text-[25px] font-semibold tracking-[-0.025em]">Your plan</h1>
           <span className="text-[13.5px] text-muted">{subtitle}</span>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            title="Sign out"
-            aria-label="Sign out"
-            className="flex h-11 w-11 items-center justify-center rounded-[11px] border border-border bg-surface text-muted-2 transition-colors hover:text-ink-2"
-          >
-            <LogOutIcon size={17} />
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          {full ? <PrintButton className="h-11 rounded-[11px]" /> : null}
+          <form action={logout}>
+            <button
+              type="submit"
+              title="Sign out"
+              aria-label="Sign out"
+              className="flex h-11 w-11 items-center justify-center rounded-[11px] border border-border bg-surface text-muted-2 transition-colors hover:text-ink-2"
+            >
+              <LogOutIcon size={17} />
+            </button>
+          </form>
+        </div>
       </header>
 
       <div className="pt-[22px]">
         {full ? (
-          <PlanView {...full} coachName={null} />
+          <>
+            <PlanPrintHeader
+              clientName={record.name as string | null}
+              planTitle={full.plan.title}
+              updatedAt={full.plan.updated_at}
+              coachName={null}
+            />
+            <PlanView {...full} coachName={null} />
+          </>
         ) : (
           <Card className="rounded-[13px]">
             <EmptyState
@@ -76,8 +89,10 @@ export default async function ConsultationPlanPage() {
       </div>
 
       {/* This screen is the whole app for a consultation client — there is no
-          account tab to put this behind. */}
-      <div className="pt-[26px]">
+          account tab to put this behind. Never in the printed copy: the PDF is
+          a document that gets forwarded on, and it must not carry an account
+          control with it. */}
+      <div className="pt-[26px] print:hidden">
         <PasswordCard />
       </div>
     </div>

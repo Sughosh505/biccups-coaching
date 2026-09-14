@@ -69,3 +69,85 @@ body {
   text-transform: uppercase;
   color: var(--color-muted-2);
 }
+
+/* ------------------------------------------------------------- Print sheet
+   DESIGN.md §4 "Print sheet (plan view)" and D-13. The plan is the one screen a
+   client keeps, and near-black is expensive on paper.
+
+   This is NOT a second theme and does not reopen the no-light-theme decision: it
+   lives entirely inside @media print and nothing renders it on screen. It works
+   because every plan component styles itself with semantic token classes, so
+   re-pointing the tokens re-themes the whole document without touching one. */
+@media print {
+  :root {
+    /* surfaces */
+    --color-base: #ffffff;
+    --color-tabbar: #ffffff;
+    --color-sunken: #fafafb;
+    --color-surface: #ffffff;
+    --color-surface-2: #f4f4f6;
+    --color-surface-3: #efeff2;
+
+    /* lines — a card on white has no fill, so the border carries its edge */
+    --color-border: #d8d8de;
+    --color-border-strong: #a9a9b4;
+    --color-divider: #e4e4e9;
+    --color-divider-soft: #ededf1;
+    --color-divider-faint: #e9e9ee;
+    --color-faintest: #dcdce2;
+
+    /* ink — the dark ramp inverted, keeping the same number of steps */
+    --color-ink: #14141a;
+    --color-ink-2: #33333d;
+    --color-ink-3: #4a4a55;
+    --color-muted: #5c5c68;
+    --color-muted-2: #70707c;
+    --color-faint: #9a9aa4;
+
+    /* accent, warn, info and on-accent keep their screen values — see below */
+  }
+
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
+    color: var(--color-ink);
+  }
+
+  /* The accent does two jobs (DESIGN.md §1) and they diverge on a light ground.
+     As a FILL it stays bright and is left alone: the macro-bar segments and the
+     training-day squares are blocks of colour on white, and the legend maps them
+     by position. As TEXT #c6f24e is ~1.4:1 on white, so only the text utilities
+     darken — the same hue, not the separate green §1 forbids.
+
+     Done as utility overrides rather than by re-pointing --color-accent, which
+     would drag the fills down with the text. No !important: this block sits
+     after Tailwind's utilities, so equal specificity resolves in its favour and
+     a print: variant on an element can still win. */
+  .text-accent {
+    color: #4f6e0a;
+  }
+
+  .text-warn {
+    color: #8a5a00;
+  }
+
+  /* Browsers drop backgrounds when printing unless told otherwise. Without this
+     the macro bar and every day square print blank, and the plan loses the only
+     chart it has. */
+  *,
+  *::before,
+  *::after {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* A section label orphaned at the foot of a page. Cards handle their own
+     break-inside in the shared component. */
+  .sec,
+  .lbl {
+    break-after: avoid;
+  }
+}
