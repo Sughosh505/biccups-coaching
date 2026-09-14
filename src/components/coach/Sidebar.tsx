@@ -32,7 +32,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-[232px] shrink-0 flex-col border-r border-border bg-surface">
+    <aside className="flex w-[232px] shrink-0 flex-col border-r border-border bg-surface print:hidden">
       <div className="flex items-center gap-2.5 px-5 pb-4 pt-5">
         <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-accent">
           <svg

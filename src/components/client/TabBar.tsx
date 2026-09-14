@@ -15,7 +15,7 @@ export function TabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="mt-auto grid grid-cols-3 border-t border-divider-soft bg-tabbar pb-[22px] pt-2.5">
+    <nav className="mt-auto grid grid-cols-3 border-t border-divider-soft bg-tabbar pb-[22px] pt-2.5 print:hidden">
       {TABS.map(({ href, label, Icon }) => {
         const active = pathname === href;
         return (

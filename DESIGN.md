@@ -323,6 +323,64 @@ link but no split still shows the section, with the button and no week card.
 The anchor carries `target="_blank"` and `rel="noopener noreferrer"` — noopener stops the opened tab
 reaching back through `window.opener`, noreferrer keeps the client's plan URL out of Lyfta's referer log.
 
+### Print sheet (plan view) — added in Phase 9
+
+The plan is the one screen a client keeps, so it has to survive leaving the app. Lives entirely inside
+`@media print` in `globals.css`: nothing renders it on screen, and D-13 does not reopen the no-light-theme
+decision.
+
+It works by **re-pointing the §1 tokens**, not by restyling anything. Every plan component uses semantic
+token classes (`bg-surface-2`, `text-ink-2`), which Tailwind compiles to `var(--color-…)`, so overriding
+the variables on `:root` re-themes the whole document without touching a component.
+
+| Token | Screen | Print | | Token | Screen | Print |
+|---|---|---|---|---|---|---|
+| `base` | `#0B0B0F` | `#FFFFFF` | | `ink` | `#EDEDF0` | `#14141A` |
+| `surface` | `#141419` | `#FFFFFF` | | `ink-2` | `#C4C4CE` | `#33333D` |
+| `surface-2` | `#17171D` | `#F4F4F6` | | `ink-3` | `#A8A8B4` | `#4A4A55` |
+| `surface-3` | `#1A1A20` | `#EFEFF2` | | `muted` | `#8B8B96` | `#5C5C68` |
+| `sunken` | `#101015` | `#FAFAFB` | | `muted-2` | `#6E6E7A` | `#70707C` |
+| `border` | `#26262E` | `#D8D8DE` | | `faint` | `#4A4A54` | `#9A9AA4` |
+| `border-strong` | `#3A3A44` | `#A9A9B4` | | `divider` | `#212128` | `#E4E4E9` |
+| `faintest` | `#2A2A32` | `#DCDCE2` | | `divider-soft` | `#1C1C22` | `#EDEDF1` |
+| `tabbar` | `#0E0E13` | `#FFFFFF` | | `divider-faint` | `#1E1E25` | `#E9E9EE` |
+
+A card has no fill on white, so its **border carries the edge**.
+
+**The accent splits into its two jobs**, which diverge on a light ground. §1 gives `--color-accent` both
+the action/positive role and the data role; at `#C6F24E` on white it is ~1.4:1.
+
+- **As text** (meal-group calories, the supplement clock icon) `.text-accent` darkens to `#4F6E0A` and
+  `.text-warn` to `#8A5A00`. Same hue, darkened — **not** the separate green §1 forbids.
+- **As a fill** (`bg-accent` / `bg-info` / `bg-warn` — the macro-bar segments and the training-day
+  squares) it keeps the on-screen value. These are blocks of colour on white and the legend maps them
+  by position.
+- Done as **utility overrides, not by re-pointing `--color-accent`** — moving the token would drag the
+  fills down with the text. It also leaves `print:` variants able to win on individual elements, which
+  is what lets the Lyfta button restyle itself below.
+- Every element carries `print-color-adjust: exact`. Without it browsers drop backgrounds and the macro
+  bar and day squares print blank — the plan loses the only chart it has.
+
+**Hidden in print** (`print:hidden`): the coach sidebar, the client tab bar, the sign-out button, the
+Change password card, the download button itself, and the preview screen's back-link, Draft/Live chip
+and preview caption.
+
+**The Lyfta link changes shape rather than disappearing.** A 54px button is meaningless on paper, but
+Chrome's Save-as-PDF preserves `<a href>` as a live link. In print it becomes a labelled URL in mono —
+readable printed, still tappable in the PDF.
+
+**Print-only document header** (`hidden print:block`): client name, plan title, `updated <date>`, and the
+coach's name when the session can resolve it. On screen the reader knows whose plan they are looking at;
+in a file that left the app, nobody does.
+
+**Width is unchanged.** The 430px client-shell cap holds in print (§9). The PDF is read on a phone far
+more often than it is put on paper, and widening it would restretch the macro bar and every card header
+— that is a second layout, which this deliberately is not.
+
+**Page breaks.** Cards carry `break-inside: avoid` from the shared §4 Card — a meal group split across a
+page boundary is the main way a printed plan goes wrong. `.sec` and `.lbl` carry `break-after: avoid` so a
+section label never orphans at the foot of a page. Page margin is `14mm`.
+
 ### Plan builder (coach, desktop) — added in Phase 4
 
 Two columns: a main column of Cards and a **sticky 260px right rail**, gap 16px, rail `position: sticky; top: 26px`.
@@ -732,7 +790,7 @@ appear there and who puts it there, per §4 EmptyState.
 | — | Weight chart shows **raw daily weight only** — no rolling average, no smoothing. |
 | — | Chart ranges are **1M · 3M · 6M · All**. No year windows, no month paginator. |
 | — | Weights reach the chart **only** through client check-ins. The coach never adds one directly — it would fabricate a logged day and inflate compliance %. |
-| — | No share or export of a client's chart. Revisit only with a consent flow recorded in `docs/production-readiness.md` §5 first; this is health data about a named person. |
+| — | No share or export of a client's **chart**. Revisit only with a consent flow recorded in `docs/production-readiness.md` §5 first; this is health data about a named person. Scoped deliberately: a chart is a longitudinal measurement record *about* someone. The **plan** is exportable (D-13) — it is prescriptive instruction written *for* them, carries no measurements, and the coach already hands it over by other means. |
 
 ---
 | D-5 | Split days are **seven free-text labels**, one per day — not one `ULRULUR` string. Supersedes the letter squares in `ClientPlan.dc.html`; see §4 Training week. |
@@ -745,14 +803,16 @@ appear there and who puts it there, per §4 EmptyState.
 | D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
 | D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
 | D-10 | The consultation login's first password is **generated, not typed**, and shown once. The admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on their own screen. |
+| D-13 | The plan view has a **light print sheet**, so the plan can leave the app as a PDF the client keeps without logging in. It is scoped to `@media print` and is **not** a second theme: nothing renders it on screen and there is still no toggle. Built by re-pointing the §1 tokens, not by restyling components — see §4 Print sheet. Near-black is expensive on paper, and a document a client is meant to keep should not require an account to re-read. |
 | D-9 | **Consultation form responses are stored as an ordered array** (`{ fields: [{section, q, a}] }`), not an object keyed by question. `jsonb` normalises object keys by length then bytewise, so an object cannot render the coach's questions back in the order they were asked. Sections come from the Google Form's page breaks, sent by the Apps Script. |
 
 ## 10. Not yet designed — ask before building
 
 - Login screen
 - Loading skeletons and toast states (empty and inline error states are now specced in §4)
-- Print stylesheet for the plan view — near-black is expensive on paper; likely a light print sheet for that one
-  route rather than a second theme
+- ~~Print stylesheet for the plan view~~ — **built in Phase 9.** Light print sheet for the plan routes
+  only, by re-pointing the §1 tokens inside `@media print`. Specced in §4 Print sheet (plan view); the
+  decision is D-13.
 
 ## 11. Implementation notes
 
