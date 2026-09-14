@@ -22,7 +22,7 @@ export default async function PlanPreviewPage({ params }: { params: Promise<{ id
   const published = Boolean(full.plan.published_at);
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-[18px] px-[30px] py-[26px]">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <Link

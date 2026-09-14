@@ -15,7 +15,7 @@ export default async function NewPlanPage({
   const options = await getPlanOwnerOptions();
 
   return (
-    <div className="flex max-w-[720px] flex-col gap-[18px]">
+    <div className="flex max-w-[720px] flex-col gap-[18px] px-[30px] py-[26px]">
       <div className="flex flex-col gap-2">
         <Link
           href="/coach/plans"

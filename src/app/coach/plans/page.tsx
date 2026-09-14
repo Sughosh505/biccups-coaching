@@ -10,7 +10,7 @@ export default async function PlansPage() {
   const plans = await getPlanSummaries();
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-[18px] px-[30px] py-[26px]">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-[21px] font-semibold tracking-[-0.02em]">Plans</h1>
