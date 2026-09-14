@@ -1,4 +1,9 @@
-export type Role = "coach" | "coaching_client" | "consultation_client";
+/**
+ * Consultation clients have no account since Phase 10 — the coach sends them the
+ * plan as a PDF instead. `plans.owner_type` still carries both values: the coach
+ * builds plans for them, they just do not log in to read one.
+ */
+export type Role = "coach" | "coaching_client";
 
 export type Profile = {
   id: string;
@@ -111,7 +116,6 @@ export type ConsultationFormResponses = { fields: ConsultationAnswer[] } | Recor
 
 export type ConsultationClient = {
   id: string;
-  auth_user_id: string | null;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -120,8 +124,8 @@ export type ConsultationClient = {
   form_response_id: string | null;
   status: "new" | "consulted" | "converted" | null;
   consulted_at: string | null;
-  /** When the coach handed over the view-only login. Null until they do. */
-  login_sent_at: string | null;
+  /** When the coach sent them their plan PDF. Null until they mark it sent. */
+  plan_sent_at: string | null;
   converted_to_client_id: string | null;
   created_at: string;
 };

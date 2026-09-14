@@ -1,10 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// A role with no entry here has no home, and the block below signs it out rather
+// than guessing — which is what retires a consultation_client account left over
+// from before Phase 10 removed the role.
 const ROLE_HOME: Record<string, string> = {
   coach: "/coach",
   coaching_client: "/client",
-  consultation_client: "/plan",
 };
 
 const PUBLIC_PATHS = ["/login"];

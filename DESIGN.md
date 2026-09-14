@@ -421,7 +421,10 @@ Save.
 ### Pipeline (consultation review) — added in Phase 5
 
 The right-rail timeline on `/coach/consultations/[id]`. Four fixed steps, in order:
-**Form submitted · Consultation call · Plan built · View-only login sent**.
+**Form submitted · Consultation call · Plan built · Plan sent**.
+
+The fourth step was *View-only login sent* until Phase 10 removed the consultation login. What it
+records now is delivery, not provisioning — the coach ticks it once the PDF has gone.
 
 Container `padding: 14px 16px`, column. Each step is a row, gap 11px:
 
@@ -445,19 +448,33 @@ Answers render as **text only** — this is untrusted input from a public endpoi
 
 ### Provisioning card (login) — added in Phase 6
 
-The `Client login` card on `/coach/clients/[id]` and the `View-only login` card at the foot of
-`/coach/consultations/[id]` are **one component shape**, not two designs. Full-width Card, header
-carrying a 15px `KeyIcon` in `--color-muted-2`. Three states:
+The `Client login` card on `/coach/clients/[id]`. Full-width Card, header carrying a 15px `KeyIcon`
+in `--color-muted-2`. Two states:
 
 1. **Not provisioned** — a 13px `--color-muted` paragraph saying what the login lets them do, an
    `Email` Field (280px, pre-filled from the record) and a primary button on the same row.
    A blocking prerequisite that is merely *missing* renders above the row as 12.5px `--color-warn`
    and never disables the button — the coach decides, the UI only warns.
-2. **Just created** (consultation only) — the generated password in mono 17px `ink` on an accent-tint
-   panel (accent 12% fill, accent 32% border, radius 8px) under a `.lbl`, beside a secondary `Copy`
-   button, over a 12.5px `--color-muted` line stating it is shown once and how to recover if lost.
-3. **Active** — one row: `Login active for {email}` in 13px `ink-2`, with where they sign in and what
+2. **Active** — one row: `Login active for {email}` in 13px `ink-2`, with where they sign in and what
    they see in 12.5px `--color-muted-2` on the right.
+
+> Until Phase 10 this shape was shared with a `View-only login` card on the consultation review
+> screen, which had a third state showing a generated password once. Consultation clients have no
+> account any more (D-14); that card is now **Send plan** below, and only coaching clients are
+> provisioned.
+
+### Send plan card (consultation review) — added in Phase 10
+
+Replaces the consultation half of the card above, in the same slot at the foot of the main column on
+`/coach/consultations/[id]`. Full-width Card, header **Send the plan**. One 13px `--color-muted`
+paragraph, then an action row. Three states, driven by the plan rather than by an account:
+
+1. **No plan yet** — paragraph only: build their plan first.
+2. **Plan is a draft** — paragraph only: publish it, then download the PDF.
+3. **Published** — an `Open the PDF` primary link to `/coach/plans/[id]/preview` (where the Download
+   PDF button lives), plus a secondary `Mark as sent` button. Once sent, the button goes and the
+   paragraph says so, and adds that a changed plan means sending a fresh copy — the client has no
+   login, so a new file is the only way an update reaches them.
 
 ### Measurement history (coach) — added in Phase 7
 
@@ -540,8 +557,8 @@ destructive, session-ending action in it misreads as encouragement.
 ### Change password (phone) — added in Phase 6
 
 A bordered section (`surface`, 1px `border`, radius 13px, `padding: 16px`) sitting above Sign out on
-`/client/account`, and at the foot of `/plan` — the consultation client has no account screen, and one
-field does not justify inventing a second route for a deliberately single-screen app.
+`/client/account`. It also sat at the foot of `/plan` until Phase 10 deleted that route with the
+consultation login (D-14); coaching clients are now the only people with a password to change.
 
 Header row: 15px `LockIcon` in `--color-muted-2` + **Change password** 13.5px/500 `ink`. Then two
 54px §4 Number fields (`type="password"`, `autocomplete="new-password"`) — New password, carrying the
@@ -632,7 +649,6 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/client/progress` | coaching_client | Cut, compliance, measurements, photos | *within* `ClientHome.dc.html` |
 | `/client/plan` | coaching_client | Plan, read-only | `ClientPlan.dc.html` |
 | `/client/account` | coaching_client | Account + sign out | derived — §4 Account |
-| `/plan` | consultation_client | Same plan view, **no tab bar** | `ClientPlan.dc.html` |
 
 Client detail tabs are fixed: **Overview · Check-ins · Plan · Progress**.
 
@@ -730,7 +746,8 @@ injuries gets the full width. The rule is on the answer, never authored per ques
 the Google Form freely and the layout has to keep working.
 
 **A generated password is shown exactly once, and never travels in a URL.**
-The consultation login's password is returned by the server action and rendered from component state,
+Applies to `createClientLogin` (Phase 10 removed the consultation login that this rule was first
+written for). The password is returned by the server action and rendered from component state,
 never passed through `redirect(...?password=)` — a query string puts a live credential into the
 address bar, browser history, the referer header and every access log in between. It is never stored
 in the database and never shown again; a lost password is recovered by deleting the account and
@@ -799,10 +816,11 @@ appear there and who puts it there, per §4 EmptyState.
 | — | The plan view at desktop width is the **same single column, centred at the 430px client-shell cap** — not a second layout. Client screens are phone-first and scale up; a plan is a document, and a document does not want to be 1400px wide. |
 | D-7 | The plan carries **one Lyfta programme link**, not one per training day. It is a different field from `daily_checkins.lyfta_link`: the plan link is the coach handing over the programme, the check-in link is the client logging the session they did. |
 | — | Plan totals are computed from the groups and never written to the database. Two places to change one number is how the sheet's totals went stale. |
-| D-8 | The coach's **private note on a consultation lives in its own table** (`consultation_notes`), never a column on `consultation_clients`. That table carries `consultation_clients_select_own`, so a column there would be readable by the consultation client the moment Phase 6 gives them a login — and the card says "only you can see this". |
+| D-8 | The coach's **private note on a consultation lives in its own table** (`consultation_notes`), never a column on `consultation_clients`. That table carried `consultation_clients_select_own`, so a column there would have been readable by the consultation client the moment Phase 6 gave them a login — and the card says "only you can see this". D-14 removed that login and the policy with it, but the split stays: it is the reason the note is coach-only by construction rather than by a policy someone could widen. |
 | D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
 | D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
-| D-10 | The consultation login's first password is **generated, not typed**, and shown once. The admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on their own screen. |
+| D-10 | ~~The consultation login's first password is **generated, not typed**, and shown once.~~ **Superseded by D-14** — there is no consultation login. The rule still governs `createClientLogin` for coaching clients: the admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on `/client/account`. |
+| D-14 | **Consultation clients have no login.** D-13 made the plan a PDF the coach sends, which is what the account existed to deliver. The account cost a hand-delivered password, no email, no resend and no recovery — for a document read once. Removed in Phase 10: the `consultation_client` role, `/plan`, `current_consultation_client_id()` and `consultation_clients.auth_user_id` are all gone. **`plans.owner_type` keeps both values** — the coach still builds plans for consultation clients, they just do not log in to read one. |
 | D-13 | The plan view has a **light print sheet**, so the plan can leave the app as a PDF the client keeps without logging in. It is scoped to `@media print` and is **not** a second theme: nothing renders it on screen and there is still no toggle. Built by re-pointing the §1 tokens, not by restyling components — see §4 Print sheet. Near-black is expensive on paper, and a document a client is meant to keep should not require an account to re-read. |
 | D-9 | **Consultation form responses are stored as an ordered array** (`{ fields: [{section, q, a}] }`), not an object keyed by question. `jsonb` normalises object keys by length then bytewise, so an object cannot render the coach's questions back in the order they were asked. Sections come from the Google Form's page breaks, sent by the Apps Script. |
 
