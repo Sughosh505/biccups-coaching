@@ -257,3 +257,22 @@ secret of the same length, an oversized body, a valid submission and a replay.
 Apps Script failures are silent to the coach. Check **Executions** in the script editor first; a
 throw there is what a non-2xx response becomes. Then confirm the Vercel env var and the script
 property still match — rotating one without the other returns `401` on every submission.
+
+### Recovering the submissions you already missed
+
+Fixing the trigger does **not** backfill anything: the Apps Script only fires on new submits, and
+re-running `onFormSubmit` by hand needs an event object it has no way to rebuild. Submissions made
+while the webhook was down never arrive.
+
+Put them in by hand instead — **Consultations → Add consultation** — copying the answers from the
+Form's own response view or the linked Sheet. A hand-added record is the same shape as a delivered
+one and renders identically; the review screen marks it `Added by hand` rather than
+`From the consultation form`, and it carries no `form_response_id`.
+
+**Do not** try to give it the real Google response id. There is nowhere in the UI to set one, and for
+good reason: if the webhook later delivered that same submission the insert would collide, and the
+route turns a collision into a silent `200` because a retrying Apps Script must not create the person
+twice. The real submission would be dropped with nothing anywhere saying so.
+
+Set **Submitted on** to the date they actually filled the form, not today — the review screen's
+pipeline dates its first step from it.
