@@ -544,6 +544,20 @@ desktop and scrolls horizontally on phone. The coach's tiles carry a delete cont
 the client's are read-only — clients never add, replace or delete a progress photo, and that is
 enforced by the storage policy, not the absence of a button.
 
+### Drive photo tile (coach) — added in Phase 12
+
+A progress photo that predates the app and still lives in the coach's Drive. Same 150×110 tile as an
+uploaded photo, but the tile **is** the link: centred column, gap 6px, a 18px `ExternalLinkIcon` over
+**Open in Drive** in 11px/500, both `--color-muted-2` moving to `ink-2` on hover. `target="_blank"`
+with `rel="noopener noreferrer"`, as every outbound link in the app carries.
+
+It cannot render inline — Drive answers with a permission page, not an image.
+
+**Coach-only, and not by a policy.** Drive enforces its own permissions, so the file opens for its
+owner and nobody else. The client's gallery filters these rows out in the query rather than showing a
+tile that would hand them a Google error. RLS still returns the row: it is theirs, it is just not
+useful to them. See D-16.
+
 ### Slider (1–10 scales)
 
 Row is **44px tall**. Track 6px, radius 4px, `background: divider-faint`. Fill accent. Thumb 26px circle, accent,
@@ -856,6 +870,7 @@ appear there and who puts it there, per §4 EmptyState.
 | D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
 | D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
 | D-10 | ~~The consultation login's first password is **generated, not typed**, and shown once.~~ **Superseded by D-14** — there is no consultation login. The rule still governs `createClientLogin` for coaching clients: the admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on `/client/account`. |
+| D-16 | **Progress photos from before the app stay in Google Drive.** The coach's sheets hold years of dated Drive links, and moving the files would be a migration that can lose them for no gain — the coach already browses them there. So `progress_photos` carries either an uploaded `photo_url` or a `drive_link`, never neither, and the coach's gallery renders a link tile for the second kind. **Clients do not see them**, because Drive would refuse them anyway; new in-app uploads behave exactly as D-11 describes. This is a one-way door only for history: nothing new should ever be filed as a Drive link. |
 | D-15 | **A consultation can be created and edited by hand.** The Google Form webhook stays the primary path; this is the fallback, because its failures are silent and a missed submission was previously unrecoverable without hand-writing `jsonb` in the dashboard. Hand entry shares the webhook's caps (`src/lib/consultation-input.ts`) but **refuses instead of truncating** — an anonymous endpoint that cannot report back should keep a shortened answer, a coach watching one save short would never notice. `form_response_id` stays null and is not settable: a real one would make a later genuine delivery collide, and the route turns a collision into a silent `200`. **Delete refuses while a plan still points at the record**, because `plans.owner_id` has no foreign key and would be orphaned. |
 | D-14 | **Consultation clients have no login.** D-13 made the plan a PDF the coach sends, which is what the account existed to deliver. The account cost a hand-delivered password, no email, no resend and no recovery — for a document read once. Removed in Phase 10: the `consultation_client` role, `/plan`, `current_consultation_client_id()` and `consultation_clients.auth_user_id` are all gone. **`plans.owner_type` keeps both values** — the coach still builds plans for consultation clients, they just do not log in to read one. |
 | D-13 | The plan view has a **light print sheet**, so the plan can leave the app as a PDF the client keeps without logging in. It is scoped to `@media print` and is **not** a second theme: nothing renders it on screen and there is still no toggle. Built by re-pointing the §1 tokens, not by restyling components — see §4 Print sheet. Near-black is expensive on paper, and a document a client is meant to keep should not require an account to re-read. |

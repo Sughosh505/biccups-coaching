@@ -90,6 +90,12 @@ export type ProgressPhoto = {
   date: string;
   /** The storage OBJECT PATH, not a URL — resolved through a signed URL to render. */
   photo_url: string | null;
+  /**
+   * History that predates the app and still lives in the coach's Drive. Coach-only
+   * in practice: Drive enforces its own permissions, so the file opens for its
+   * owner and nobody else. A row has one of these or a photo_url, never neither.
+   */
+  drive_link: string | null;
   notes: string | null;
   created_at: string | null;
 };

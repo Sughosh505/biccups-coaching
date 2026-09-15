@@ -10,7 +10,7 @@ import {
   uploadProgressPhotos,
 } from "@/app/coach/clients/[id]/progress/actions";
 import { Button, Card, CardHeader, EmptyState, Field, Sparkline } from "@/components/ui";
-import { ImageIcon, InfoIcon, XIcon } from "@/components/icons";
+import { ExternalLinkIcon, ImageIcon, InfoIcon, XIcon } from "@/components/icons";
 import { MEASUREMENT_SITES } from "@/lib/types";
 
 const NOTICES: Record<string, string> = {
@@ -268,6 +268,21 @@ export default async function ClientProgressPage({
                           alt={`Progress photo from ${day.date}`}
                           className="h-full w-full object-cover"
                         />
+                      ) : photo.driveLink ? (
+                        /* History that predates the app and still lives in Drive.
+                           It cannot be shown inline — Drive serves a permission
+                           page, not an image — so the tile is the link itself.
+                           The client never sees this: their query skips these rows
+                           because the file would not open for them either. */
+                        <a
+                          href={photo.driveLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-full flex-col items-center justify-center gap-1.5 text-muted-2 transition-colors hover:text-ink-2"
+                        >
+                          <ExternalLinkIcon size={18} />
+                          <span className="text-[11px] font-medium">Open in Drive</span>
+                        </a>
                       ) : (
                         <span className="flex h-full items-center justify-center">
                           <ImageIcon size={20} className="text-border-strong" />
