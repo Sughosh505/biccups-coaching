@@ -5,7 +5,7 @@
 // the number the client will read is visible while the coach builds it.
 import { useMemo, useState } from "react";
 import { Card, CardHeader } from "@/components/ui";
-import { PlusIcon, XIcon } from "@/components/icons";
+import { AddButton, RemoveButton, TextInput } from "@/components/ui/controlled";
 import {
   DAY_NAMES,
   formatCalories,
@@ -39,71 +39,6 @@ const numText = (v: number | null) => (typeof v === "number" ? String(v) : "");
 // that without reading a ref during render.
 let uid = 0;
 const key = () => ++uid;
-
-/* --------------------------------------------------------------- Controls */
-
-function TextInput({
-  value,
-  onChange,
-  placeholder,
-  suffix,
-  numeric,
-  className = "",
-  ariaLabel,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  suffix?: string;
-  numeric?: boolean;
-  className?: string;
-  ariaLabel: string;
-}) {
-  return (
-    <span
-      className={`flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 focus-within:border-border-strong ${className}`}
-    >
-      <input
-        aria-label={ariaLabel}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        inputMode={numeric ? "decimal" : undefined}
-        className={`w-full min-w-0 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-faint ${
-          numeric ? "tnum" : ""
-        }`}
-      />
-      {suffix ? <span className="shrink-0 text-[12.5px] text-muted-2">{suffix}</span> : null}
-    </span>
-  );
-}
-
-function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-2 transition-colors hover:bg-surface-2 hover:text-alert"
-    >
-      <XIcon size={15} />
-    </button>
-  );
-}
-
-function AddButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-fit items-center gap-1.5 text-[12px] font-medium text-accent transition-colors hover:text-accent-hover"
-    >
-      <PlusIcon size={13} strokeWidth={2.2} />
-      {children}
-    </button>
-  );
-}
 
 /* ---------------------------------------------------------------- Builder */
 

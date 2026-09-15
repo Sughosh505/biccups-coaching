@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ConsultationAnswer } from "@/lib/types";
+import { answers, LIMITS, MAX_BODY_BYTES, str } from "@/lib/consultation-input";
 
 /**
  * Consultation intake — the Google Form's Apps Script POSTs here on submit.
@@ -15,11 +15,8 @@ import type { ConsultationAnswer } from "@/lib/types";
  * that distinguishes "bad secret" from "bad payload" is a probing aid.
  */
 
-/** 64 KB. A consultation form is a few kilobytes of text; nothing legitimate is near this. */
-const MAX_BODY_BYTES = 64 * 1024;
-
-const MAX_FIELDS = 120;
-const LIMITS = { name: 200, email: 320, phone: 50, responseId: 200, section: 120, q: 500, a: 5000 };
+/* MAX_BODY_BYTES, MAX_FIELDS, LIMITS, str() and answers() are shared with the coach's
+   manual entry form — see src/lib/consultation-input.ts for why. */
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 10;
@@ -95,32 +92,6 @@ async function readBody(request: NextRequest): Promise<string | null> {
   }
 
   return text + decoder.decode();
-}
-
-function str(value: unknown, max: number): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  return trimmed.slice(0, max);
-}
-
-function answers(value: unknown): ConsultationAnswer[] {
-  if (!Array.isArray(value)) return [];
-
-  const out: ConsultationAnswer[] = [];
-  for (const entry of value.slice(0, MAX_FIELDS)) {
-    if (typeof entry !== "object" || entry === null) continue;
-    const { section, q, a } = entry as Record<string, unknown>;
-    const question = str(q, LIMITS.q);
-    const answer = str(a, LIMITS.a);
-    if (!question && !answer) continue;
-    out.push({
-      section: str(section, LIMITS.section),
-      q: question ?? "",
-      a: answer ?? "",
-    });
-  }
-  return out;
 }
 
 export async function POST(request: NextRequest) {
