@@ -553,6 +553,11 @@ with `rel="noopener noreferrer"`, as every outbound link in the app carries.
 
 It cannot render inline — Drive answers with a permission page, not an image.
 
+**The check-in table's food-photo indicator follows the same rule.** On
+`/coach/clients/[id]/checkins` the `ImageIcon` is plain when the photo was uploaded in-app (it is shown
+on the check-in itself) and becomes an anchor in `--color-muted` when the day carries a
+`diet_photo_link`, sitting beside the Lyfta session link it already shares a row with.
+
 **Coach-only, and not by a policy.** Drive enforces its own permissions, so the file opens for its
 owner and nobody else. The client's gallery filters these rows out in the query rather than showing a
 tile that would hand them a Google error. RLS still returns the row: it is theirs, it is just not

@@ -92,11 +92,27 @@ function CheckinRow({ checkin }: { checkin: DailyCheckin }) {
         {num(checkin.stress)}
       </span>
       <span className="flex items-center gap-2.5">
-        <ImageIcon
-          size={15}
-          strokeWidth={1.8}
-          className={checkin.diet_photo_url ? "text-muted" : "text-border"}
-        />
+        {/* A food photo from before the app is a Drive link, and Drive will not
+            serve it inline — so the indicator becomes the link itself. An uploaded
+            photo keeps the plain icon: it is shown on the check-in itself. */}
+        {checkin.diet_photo_link ? (
+          <a
+            href={checkin.diet_photo_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open the food photo in Drive"
+            aria-label={`Open the food photo from ${checkin.date} in Drive`}
+            className="text-muted transition-colors hover:text-ink-2"
+          >
+            <ImageIcon size={15} strokeWidth={1.8} />
+          </a>
+        ) : (
+          <ImageIcon
+            size={15}
+            strokeWidth={1.8}
+            className={checkin.diet_photo_url ? "text-muted" : "text-border"}
+          />
+        )}
         {sessionLink(checkin.lyfta_link) && !checkin.rest_day ? (
           <a
             href={sessionLink(checkin.lyfta_link) as string}

@@ -50,6 +50,12 @@ export type DailyCheckin = {
   rest_day: boolean;
   /** Storage object path in the private `daily-photos` bucket, not a URL. */
   diet_photo_url: string | null;
+  /**
+   * History that predates the app and still lives in the coach's Drive. Coach-only
+   * in practice, like ProgressPhoto.drive_link — Drive enforces its own
+   * permissions. Kept separate from diet_photo_url, which is always a path.
+   */
+  diet_photo_link: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string | null;

@@ -254,6 +254,7 @@ const IDX = {
   // Ezhil's is a Form-responses dump and carries the workout link inline.
   notes: col("NOTES", "NOTE", "COMMENTS"),
   lyfta: col("LYFTA LINK", "LYFTA", "WORKOUT LINK"),
+  dietPhoto: col("DIET PHOTO", "FOOD PHOTO"),
 };
 
 const missing = Object.entries(IDX).filter(([, i]) => i === -1).map(([k]) => k);
@@ -297,7 +298,7 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   const dataCols = [
     IDX.weight, IDX.steps, IDX.calories, IDX.supplements, IDX.sleepTime,
     IDX.sleepHrs, IDX.quality, IDX.water, IDX.hunger, IDX.digestion, IDX.stress,
-    IDX.notes, IDX.lyfta,
+    IDX.notes, IDX.lyfta, IDX.dietPhoto,
   ];
   if (dataCols.every((i) => isBlank(cell(row, i)))) {
     skippedEmpty++;
@@ -373,8 +374,20 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     }
   }
 
+  // Same rule as the workout link: https only, because the column has a CHECK.
+  let dietPhoto = null;
+  const rawDiet = isBlank(cell(row, IDX.dietPhoto)) ? null : String(cell(row, IDX.dietPhoto)).trim();
+  if (rawDiet) {
+    if (/^https:\/\/\S+$/.test(rawDiet)) dietPhoto = rawDiet;
+    else {
+      problems.push(`${date}: food photo "${rawDiet}" is not an https:// address, kept as a note`);
+      noteParts.push(`diet photo: ${rawDiet}`);
+    }
+  }
+
   parsed.push({
     date,
+    diet_photo_link: dietPhoto,
     lyfta_link: lyfta,
     notes: noteParts.length ? noteParts.join(" · ") : null,
     weight: weight.value,
