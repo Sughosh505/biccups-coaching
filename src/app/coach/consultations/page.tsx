@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireCoach } from "@/lib/auth";
 import { getConsultations } from "@/lib/queries/consultation";
-import { Avatar, Card, EmptyState, StatusChip } from "@/components/ui";
-import { ChevronRightIcon, ConsultationsIcon } from "@/components/icons";
+import { Avatar, ButtonLink, Card, EmptyState, StatusChip } from "@/components/ui";
+import { ChevronRightIcon, ConsultationsIcon, PlusIcon } from "@/components/icons";
 import type { Tone } from "@/lib/metrics";
 
 const COLUMNS = "grid grid-cols-[2.4fr_1.2fr_1fr_0.3fr]";
@@ -28,12 +28,18 @@ export default async function ConsultationsPage() {
 
   return (
     <div className="flex flex-col gap-[18px] px-[30px] py-[26px]">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[21px] font-semibold tracking-[-0.02em]">Consultations</h1>
-        <span className="text-[13px] text-muted">
-          {consultations.length} {consultations.length === 1 ? "submission" : "submissions"}
-          {awaiting > 0 ? ` · ${awaiting} awaiting a call` : ""}
-        </span>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[21px] font-semibold tracking-[-0.02em]">Consultations</h1>
+          <span className="text-[13px] text-muted">
+            {consultations.length} {consultations.length === 1 ? "submission" : "submissions"}
+            {awaiting > 0 ? ` · ${awaiting} awaiting a call` : ""}
+          </span>
+        </div>
+        <ButtonLink href="/coach/consultations/new">
+          <PlusIcon size={15} />
+          Add consultation
+        </ButtonLink>
       </div>
 
       <Card>
@@ -52,7 +58,7 @@ export default async function ConsultationsPage() {
           <EmptyState
             icon={<ConsultationsIcon size={26} />}
             title="No consultations yet"
-            hint="Submissions arrive here from the consultation Google Form, as soon as someone fills it in."
+            hint="Submissions arrive here from the consultation Google Form, as soon as someone fills it in. If one never turns up, add it by hand."
           />
         ) : (
           consultations.map((c) => (

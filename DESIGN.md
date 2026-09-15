@@ -446,6 +446,40 @@ answer 13.5px/1.5 `ink`.
 
 Answers render as **text only** — this is untrusted input from a public endpoint, so never as markup.
 
+**Provenance line** (added in Phase 11) — beneath the header's "Consultation form submitted {date}",
+11.5px `--color-muted-2`: `From the consultation form` when `form_response_id` is set, `Added by hand`
+when it is null. The record is editable, so without this nothing on the screen separates what the
+client submitted from what the coach typed or corrected afterwards.
+
+### Consultation form (coach, desktop) — added in Phase 11
+
+Add and edit are **one component** (`ConsultationForm`), differing only by props — the same
+arrangement as `ClientForm`. It follows §4 Form; only the two things below are new.
+
+**Repeatable answer row.** The Responses card holds one block per question,
+`border-bottom: 1px solid divider` with none on the last, gap 8px:
+
+- a top line, gap 8px: a 210px fixed **Section** input, a flex-1 **Question** input, and a 36px
+  §4 remove button (`XIcon` 15px, `--color-muted-2`, `hover:text-alert`)
+- beneath it a full-width **Answer** textarea, `rows=2`, right-inset by 44px so it stops level with
+  the inputs above rather than running under the remove button
+- an accent **Add a question** ghost action at the foot of the card (`PlusIcon` 13px at 2.2 stroke)
+
+**There is no wide/narrow control.** §7 decides an answer's column span from the answer itself, and
+the coach edits the Google Form freely — authoring it per question would break the moment they did.
+
+**Delete confirm panel.** Two steps, driven by `?confirm=delete` rather than a dialog — one button
+does not justify a `"use client"` boundary (§11). Unconfirmed it is a ghost `Delete this
+consultation` in `--color-muted-2`, `hover:text-alert`, below a `divider` rule. Confirmed it becomes
+a panel in its place: `border: 1px solid alert/30`, `background: alert/10`, radius 10px,
+`padding: 14px 16px`, a 13px `ink-2` sentence **naming the person** over a Secondary `Yes, delete`
+and a ghost `Cancel`.
+
+> This is the only confirmed destructive action in the app — `deletePlan`,
+> `deleteMeasurement` and `deleteProgressPhoto` all destroy on one click. Deliberate: a plan can be
+> rebuilt in the builder, but a consultation record *is* the client's intake answers, and once the
+> Google Form data has aged out there is nowhere left to recover them from.
+
 ### Provisioning card (login) — added in Phase 6
 
 The `Client login` card on `/coach/clients/[id]`. Full-width Card, header carrying a 15px `KeyIcon`
@@ -640,6 +674,8 @@ Must remain usable from 360px up, and must not break when scaled to desktop widt
 | `/coach/clients/[id]/progress` | coach | Client detail — Progress tab (measurements + photos) | derived — §4 Table, §4 Form |
 | `/coach/consultations` | coach | Consultations list | derived — §4 Table |
 | `/coach/consultations/[id]` | coach | Consultation review | `ConsultationReview.dc.html` |
+| `/coach/consultations/new` | coach | Add a consultation by hand | derived — §4 Form |
+| `/coach/consultations/[id]/edit` | coach | Edit or delete a consultation | derived — §4 Form |
 | `/coach/reports` | coach | Reports — compliance | derived — §4 Table, §4 Stat tile |
 | `/coach/plans` | coach | Plans list | derived — §4 Table |
 | `/coach/plans/new` | coach | New plan — pick the client it belongs to | derived — §4 Form |
@@ -820,6 +856,7 @@ appear there and who puts it there, per §4 EmptyState.
 | D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
 | D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
 | D-10 | ~~The consultation login's first password is **generated, not typed**, and shown once.~~ **Superseded by D-14** — there is no consultation login. The rule still governs `createClientLogin` for coaching clients: the admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on `/client/account`. |
+| D-15 | **A consultation can be created and edited by hand.** The Google Form webhook stays the primary path; this is the fallback, because its failures are silent and a missed submission was previously unrecoverable without hand-writing `jsonb` in the dashboard. Hand entry shares the webhook's caps (`src/lib/consultation-input.ts`) but **refuses instead of truncating** — an anonymous endpoint that cannot report back should keep a shortened answer, a coach watching one save short would never notice. `form_response_id` stays null and is not settable: a real one would make a later genuine delivery collide, and the route turns a collision into a silent `200`. **Delete refuses while a plan still points at the record**, because `plans.owner_id` has no foreign key and would be orphaned. |
 | D-14 | **Consultation clients have no login.** D-13 made the plan a PDF the coach sends, which is what the account existed to deliver. The account cost a hand-delivered password, no email, no resend and no recovery — for a document read once. Removed in Phase 10: the `consultation_client` role, `/plan`, `current_consultation_client_id()` and `consultation_clients.auth_user_id` are all gone. **`plans.owner_type` keeps both values** — the coach still builds plans for consultation clients, they just do not log in to read one. |
 | D-13 | The plan view has a **light print sheet**, so the plan can leave the app as a PDF the client keeps without logging in. It is scoped to `@media print` and is **not** a second theme: nothing renders it on screen and there is still no toggle. Built by re-pointing the §1 tokens, not by restyling components — see §4 Print sheet. Near-black is expensive on paper, and a document a client is meant to keep should not require an account to re-read. |
 | D-9 | **Consultation form responses are stored as an ordered array** (`{ fields: [{section, q, a}] }`), not an object keyed by question. `jsonb` normalises object keys by length then bytewise, so an object cannot render the coach's questions back in the order they were asked. Sections come from the Google Form's page breaks, sent by the Apps Script. |

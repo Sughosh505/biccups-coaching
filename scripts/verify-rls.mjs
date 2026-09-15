@@ -589,6 +589,61 @@ check(
   `anon sees ${(anonConsults ?? []).length}, client sees ${(clientConsults ?? []).length}`,
 );
 
+// --- the consultation WRITE boundary (Phase 11) ------------------------------
+// Phase 11 gave the coach server actions that insert, update and delete these rows.
+// Reads were already proved above; nothing had ever proved that the only OTHER role
+// left cannot write one. consultation_clients_coach_all is `for all`, so the same
+// policy governs all four verbs — but "it should" is what a gate is for.
+const writeProbes = [
+  ["insert", (c) => c.from("consultation_clients").insert({ name: `Verify — forged ${planStamp}` })],
+  ["update", (c) => c.from("consultation_clients").update({ name: "forged" }).eq("id", consultRecord.id)],
+  ["delete", (c) => c.from("consultation_clients").delete().eq("id", consultRecord.id)],
+];
+
+const clientWrites = {};
+const anonWrites = {};
+for (const [verb, run] of writeProbes) {
+  const { error: clientErr } = await run(asClient);
+  const { error: anonErr } = await run(signedOut);
+  clientWrites[verb] = clientErr ? clientErr.code ?? "refused" : "ALLOWED";
+  anonWrites[verb] = anonErr ? anonErr.code ?? "refused" : "ALLOWED";
+}
+
+// RLS refuses an insert outright, but an update or delete that matches no visible
+// row succeeds with zero rows affected rather than erroring — so the row itself is
+// re-read to prove nothing actually moved.
+const { data: consultRowAfter } = await admin
+  .from("consultation_clients")
+  .select("name")
+  .eq("id", consultRecord.id)
+  .maybeSingle();
+
+check(
+  "40. a coaching client CANNOT insert a consultation record",
+  clientWrites.insert !== "ALLOWED",
+  JSON.stringify(clientWrites),
+);
+check(
+  "41. an anonymous session CANNOT insert a consultation record",
+  anonWrites.insert !== "ALLOWED",
+  JSON.stringify(anonWrites),
+);
+check(
+  "42. neither can rename or delete one — the row is untouched",
+  consultRowAfter !== null && consultRowAfter.name === `Verify — consultation ${planStamp}`,
+  consultRowAfter ? `name is now "${consultRowAfter.name}"` : "the row was deleted",
+);
+
+// The coach's private note is the other half of the same table pair.
+const { error: noteWriteErr } = await asClient
+  .from("consultation_notes")
+  .insert({ consultation_client_id: consultRecord.id, body: "forged" });
+check(
+  "43. a coaching client CANNOT write a consultation note",
+  noteWriteErr !== null,
+  noteWriteErr ? `got ${noteWriteErr.code}` : "the note was written",
+);
+
 // --- the column and the function that made a login possible ------------------
 // Both were dropped in Phase 10. If either came back, a consultation login could be
 // reinstated without anyone noticing the boundary had moved, and checks 27-28 would
@@ -598,7 +653,7 @@ const { error: colErr } = await admin
   .update({ auth_user_id: created.user.id })
   .eq("id", consultRecord.id);
 check(
-  "40. consultation_clients.auth_user_id no longer exists",
+  "44. consultation_clients.auth_user_id no longer exists",
   colErr !== null && /auth_user_id/.test(`${colErr.message ?? ""}`),
   colErr ? colErr.message : "the column accepted a write",
 );
@@ -607,7 +662,7 @@ check(
 // exactly the lookup this phase removed.
 const { error: fnErr } = await admin.rpc("current_consultation_client_id");
 check(
-  "41. current_consultation_client_id() no longer exists",
+  "45. current_consultation_client_id() no longer exists",
   fnErr !== null,
   fnErr ? `${fnErr.code ?? ""} ${fnErr.message ?? ""}`.trim() : "the function still resolves",
 );
@@ -627,7 +682,7 @@ const progressTheirs = `${theirs.id}/verify-${stamp}.jpg`;
 const { data: buckets } = await admin.storage.listBuckets();
 const progressBucket = (buckets ?? []).find((b) => b.name === PROGRESS_BUCKET);
 check(
-  "42. the progress-photos bucket exists and is private",
+  "46. the progress-photos bucket exists and is private",
   !!progressBucket && progressBucket.public === false,
   progressBucket ? `public: ${progressBucket.public}` : "bucket not found — run the phase 7 migration",
 );
@@ -636,7 +691,7 @@ const { error: progressOwnWrite } = await asClient.storage
   .from(PROGRESS_BUCKET)
   .upload(progressOwn, jpeg(), { contentType: "image/jpeg" });
 check(
-  "43. client CANNOT upload a progress photo, even into their own folder",
+  "47. client CANNOT upload a progress photo, even into their own folder",
   !!progressOwnWrite,
   progressOwnWrite ? "" : "upload succeeded",
 );
@@ -652,7 +707,7 @@ const { error: progressOwnRead } = await asClient.storage
   .from(PROGRESS_BUCKET)
   .download(progressOwn);
 check(
-  "44. client CAN read their own progress photo",
+  "48. client CAN read their own progress photo",
   !progressOwnRead,
   progressOwnRead?.message,
 );
@@ -661,7 +716,7 @@ const { error: progressCrossRead } = await asClient.storage
   .from(PROGRESS_BUCKET)
   .download(progressTheirs);
 check(
-  "45. client CANNOT read another client's progress photo",
+  "49. client CANNOT read another client's progress photo",
   !!progressCrossRead,
   progressCrossRead ? "" : "download succeeded",
 );
@@ -673,14 +728,14 @@ const { data: stillThere } = await admin.storage
   .from(PROGRESS_BUCKET)
   .download(progressOwn);
 check(
-  "46. client CANNOT delete their own progress photo",
+  "50. client CANNOT delete their own progress photo",
   !!stillThere,
   progressDelete ? "" : "remove reported success",
 );
 
 const progressRaw = await fetch(`${URL_}/storage/v1/object/public/${PROGRESS_BUCKET}/${progressOwn}`);
 check(
-  "47. progress photos are not readable without a signed URL",
+  "51. progress photos are not readable without a signed URL",
   progressRaw.status !== 200,
   `status ${progressRaw.status}`,
 );
@@ -696,7 +751,7 @@ const { data: measureAfter } = await admin
   .eq("client_id", mine.id)
   .eq("date", "2099-03-03");
 check(
-  "48. client CANNOT record their own measurements",
+  "52. client CANNOT record their own measurements",
   (measureAfter?.length ?? 0) === 0,
   measureWrite ? "" : "insert silently applied",
 );
@@ -723,7 +778,7 @@ const { data: newSession, error: newFails } = await probe.auth.signInWithPasswor
 await probe.auth.signOut();
 
 check(
-  "49. client can change their own password, and the old one stops working",
+  "53. client can change their own password, and the old one stops working",
   !!shortErr && !changeErr && !!oldStillWorks && !newFails && !!newSession.session,
   [
     shortErr ? "short rejected" : "SHORT ACCEPTED",
@@ -759,7 +814,7 @@ const { error: goodSession } = await admin
   .eq("client_id", mine.id)
   .eq("date", PROBE_OWN_DATE);
 check(
-  "50. database refuses a non-https check-in Lyfta link, even from the service role",
+  "54. database refuses a non-https check-in Lyfta link, even from the service role",
   acceptedSession.length === 0 && !goodSession,
   acceptedSession.length ? `accepted ${acceptedSession.join(", ")}` : goodSession?.message,
 );
@@ -786,7 +841,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "51. cleanup restored the client row to how it was found",
+  "55. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
