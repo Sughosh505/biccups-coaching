@@ -250,10 +250,25 @@ const IDX = {
   hunger: col("HUNGER"),
   digestion: col("DIGESTION"),
   stress: col("STRESS"),
+  // Not every workbook has these. Sriram's carries a free-text notes column;
+  // Ezhil's is a Form-responses dump and carries the workout link inline.
+  notes: col("NOTES", "NOTE", "COMMENTS"),
+  lyfta: col("LYFTA LINK", "LYFTA", "WORKOUT LINK"),
 };
 
 const missing = Object.entries(IDX).filter(([, i]) => i === -1).map(([k]) => k);
-if (missing.length) console.log(`note: no column found for ${missing.join(", ")} — those stay null\n`);
+if (missing.length) console.log(`note: no column found for ${missing.join(", ")} — those stay null`);
+
+// Every workbook grew its own extra columns. The app's schema is the standard the
+// sheets are being normalised onto, so these are dropped on purpose — but say so,
+// because a column vanishing without a word is how a migration loses data quietly.
+const mapped = new Set(Object.values(IDX).filter((i) => i !== -1));
+const ignored = header
+  .map((h, i) => [h.trim().replace(/\s+/g, " "), i])
+  .filter(([h, i]) => h !== "" && !mapped.has(i) && !/^WEEK$/i.test(h))
+  .map(([h]) => h);
+if (ignored.length) console.log(`note: no place in the app for ${ignored.join(", ")} — not imported`);
+if (missing.length || ignored.length) console.log("");
 
 const cell = (row, i) => (i === -1 ? "" : (row[i] ?? ""));
 
@@ -282,6 +297,7 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   const dataCols = [
     IDX.weight, IDX.steps, IDX.calories, IDX.supplements, IDX.sleepTime,
     IDX.sleepHrs, IDX.quality, IDX.water, IDX.hunger, IDX.digestion, IDX.stress,
+    IDX.notes, IDX.lyfta,
   ];
   if (dataCols.every((i) => isBlank(cell(row, i)))) {
     skippedEmpty++;
@@ -300,13 +316,21 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   const digestion = yesNo(cell(row, IDX.digestion));
   const sleep = bedtime(cell(row, IDX.sleepTime));
 
+  // A cell that will not coerce is usually the client answering in words —
+  // "Didnt track sick" in CALORIES, "BLOATING" in DIGESTION. That is exactly what
+  // the coach wants to read, and the schema has somewhere to put it, so it is
+  // carried into notes rather than thrown away. Still reported: the number is gone.
+  const carried = [];
   for (const [label, got] of [
     ["weight", weight], ["steps", steps], ["calories", calories],
     ["sleep duration", sleepHrs], ["water", water], ["sleep quality", quality],
     ["hunger", hunger], ["stress", stress], ["supplements", supplements],
     ["digestion", digestion], ["sleep time", sleep],
   ]) {
-    if (got.bad !== null) problems.push(`${date}: ${label} — could not read "${got.bad}"`);
+    if (got.bad !== null) {
+      problems.push(`${date}: ${label} — "${got.bad}" is not a number, kept as a note`);
+      carried.push(`${label}: ${got.bad}`);
+    }
   }
   if (sleep.note) notes.push(`${date}: bedtime ${sleep.note}`);
 
@@ -334,8 +358,25 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     notes.push(`${date}: only ${filled} value recorded — a stray cell? It will count as a check-in`);
   }
 
+  const ownNote = isBlank(cell(row, IDX.notes)) ? null : String(cell(row, IDX.notes)).trim();
+  const noteParts = [ownNote, ...carried].filter(Boolean);
+
+  // daily_checkins_lyfta_link_https rejects anything else, so a non-https link is
+  // kept as a note rather than failing the whole row.
+  let lyfta = null;
+  const rawLyfta = isBlank(cell(row, IDX.lyfta)) ? null : String(cell(row, IDX.lyfta)).trim();
+  if (rawLyfta) {
+    if (/^https:\/\/\S+$/.test(rawLyfta)) lyfta = rawLyfta;
+    else {
+      problems.push(`${date}: workout link "${rawLyfta}" is not an https:// address, kept as a note`);
+      noteParts.push(`lyfta link: ${rawLyfta}`);
+    }
+  }
+
   parsed.push({
     date,
+    lyfta_link: lyfta,
+    notes: noteParts.length ? noteParts.join(" · ") : null,
     weight: weight.value,
     steps: steps.value === null ? null : Math.round(steps.value),
     calories: calories.value === null ? null : Math.round(calories.value),
