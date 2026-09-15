@@ -11,6 +11,7 @@ import {
 import { Card, EmptyState, toneText } from "@/components/ui";
 import { DumbbellIcon, ImageIcon, InfoIcon } from "@/components/icons";
 import type { DailyCheckin } from "@/lib/types";
+import { span } from "@/lib/timing";
 
 // The 12-column spec is the artboard's — docs/frontend/canvas/ClientCheckins.dc.html.
 const COLUMNS =
@@ -196,6 +197,7 @@ export default async function ClientCheckinsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ range?: string }>;
 }) {
+  const done = span("RENDER [id]/checkins");
   const { id } = await params;
   const { range } = await searchParams;
 
@@ -208,6 +210,7 @@ export default async function ClientCheckinsPage({
 
   const visible = from ? detail.checkins.filter((c) => c.date >= from) : detail.checkins;
   const bands = groupIntoWeeks(visible, detail.client.start_date, now, from);
+  done();
 
   return (
     <div className="flex flex-col gap-3.5 px-8 py-5">

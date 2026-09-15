@@ -5,6 +5,7 @@ import { daysBetween, today } from "@/lib/metrics";
 import { Avatar, ButtonLink, StatusChip } from "@/components/ui";
 import { ChevronLeftIcon } from "@/components/icons";
 import { ClientTabs } from "@/components/coach/ClientTabs";
+import { span } from "@/lib/timing";
 
 export default async function ClientLayout({
   children,
@@ -13,6 +14,7 @@ export default async function ClientLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
+  const done = span("RENDER [id]/layout");
   const { id } = await params;
   const detail = await getClientDetail(id);
   if (!detail) notFound();
@@ -34,6 +36,8 @@ export default async function ClientLayout({
   ]
     .filter(Boolean)
     .join(" · ");
+
+  done();
 
   return (
     <div className="flex flex-col">

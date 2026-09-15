@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/coach/Sidebar";
+import { span, timed } from "@/lib/timing";
 
 export default async function CoachLayout({ children }: { children: React.ReactNode }) {
+  const done = span("RENDER coach/layout");
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await timed("  coach/layout auth.getUser", () => supabase.auth.getUser());
 
   if (!user) redirect("/login");
 
@@ -19,6 +21,8 @@ export default async function CoachLayout({ children }: { children: React.ReactN
         .select("id", { count: "exact", head: true })
         .eq("status", "new"),
     ]);
+
+  done();
 
   return (
     <div className="flex min-h-screen bg-base">

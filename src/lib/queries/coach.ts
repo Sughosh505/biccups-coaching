@@ -1,4 +1,6 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { timed } from "@/lib/timing";
 import {
   compliancePct,
   complianceTone,
@@ -212,23 +214,41 @@ export type ClientDetail = {
   lastCheckin: string | null;
 };
 
-export async function getClientDetail(id: string): Promise<ClientDetail | null> {
+/**
+ * The client row, their check-ins and their measurements.
+ *
+ * Wrapped in `cache()` because the client layout and every tab rendered inside
+ * it ask for the same detail on the same request — without memoization that is
+ * two full sets of queries per page load, and three on Progress.
+ *
+ * The three queries run together rather than in sequence. The client row used to
+ * gate the other two so a missing client skipped them, but a missing client is
+ * the rare case and the gate cost a whole Supabase round trip on every load.
+ */
+export const getClientDetail = cache(async (id: string): Promise<ClientDetail | null> => {
   const supabase = await createClient();
 
-  const { data: client } = await supabase.from("clients").select("*").eq("id", id).single();
+  const [{ data: client }, { data: checkins }, { data: measurements }] = await Promise.all([
+    timed("query clients.single", () =>
+      supabase.from("clients").select("*").eq("id", id).single(),
+    ),
+    timed("query daily_checkins", () =>
+      supabase
+        .from("daily_checkins")
+        .select("*")
+        .eq("client_id", id)
+        .order("date", { ascending: false }),
+    ),
+    timed("query measurements", () =>
+      supabase
+        .from("measurements")
+        .select("*")
+        .eq("client_id", id)
+        .order("date", { ascending: false }),
+    ),
+  ]);
+
   if (!client) return null;
-
-  const { data: checkins } = await supabase
-    .from("daily_checkins")
-    .select("*")
-    .eq("client_id", id)
-    .order("date", { ascending: false });
-
-  const { data: measurements } = await supabase
-    .from("measurements")
-    .select("*")
-    .eq("client_id", id)
-    .order("date", { ascending: false });
 
   const rows = (checkins ?? []) as DailyCheckin[];
   const dates = rows.map((r) => r.date);
@@ -240,4 +260,4 @@ export async function getClientDetail(id: string): Promise<ClientDetail | null> 
     compliance: compliancePct(dates, client.start_date),
     lastCheckin: dates.length ? dates[0] : null,
   };
-}
+});

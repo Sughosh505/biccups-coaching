@@ -12,6 +12,7 @@ import {
 import { Button, Card, CardHeader, EmptyState, Field, Sparkline } from "@/components/ui";
 import { ExternalLinkIcon, ImageIcon, InfoIcon, XIcon } from "@/components/icons";
 import { MEASUREMENT_SITES } from "@/lib/types";
+import { span, timed } from "@/lib/timing";
 
 const NOTICES: Record<string, string> = {
   measurement: "Measurement saved.",
@@ -48,14 +49,18 @@ export default async function ClientProgressPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  await requireCoach();
+  const done = span("RENDER [id]/progress");
+  await timed("  progress requireCoach", () => requireCoach());
   const { id } = await params;
   const { error, saved } = await searchParams;
 
   const detail = await getClientDetail(id);
   if (!detail) notFound();
 
-  const { measurements, photoDays } = await getClientProgress(id);
+  const { measurements, photoDays } = await timed("  progress getClientProgress", () =>
+    getClientProgress(id),
+  );
+  done();
   const now = today();
 
   return (

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { span, timed } from "@/lib/timing";
 
 // A role with no entry here has no home, and the block below signs it out rather
 // than guessing — which is what retires a consultation_client account left over
@@ -12,6 +13,14 @@ const ROLE_HOME: Record<string, string> = {
 const PUBLIC_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
+  const done = span(`proxy ${request.nextUrl.pathname}`);
+  const kind = request.headers.get("next-router-prefetch")
+    ? "PREFETCH"
+    : request.headers.get("rsc")
+      ? "rsc-nav"
+      : "document";
+  const rsc = request.nextUrl.searchParams.get("_rsc");
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -37,7 +46,7 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await timed("  proxy auth.getUser", () => supabase.auth.getUser());
 
   const { pathname } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
@@ -50,11 +59,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data: profile } = await timed("  proxy profiles.single", () =>
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+  );
 
   const role = profile?.role as string | undefined;
   const home = role ? ROLE_HOME[role] : undefined;
@@ -89,5 +96,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  done(`${kind} _rsc=${rsc ?? "-"}`);
   return response;
 }

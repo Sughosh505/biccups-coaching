@@ -13,6 +13,7 @@ import {
 } from "@/components/ui";
 import { RangedWeightChart } from "@/components/ui/WeightChart";
 import { DumbbellIcon, ImageIcon, KeyIcon } from "@/components/icons";
+import { span } from "@/lib/timing";
 
 const MEASUREMENT_FIELDS = [
   ["Arms — right", "arms_right"],
@@ -32,6 +33,7 @@ export default async function ClientOverviewPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; created?: string }>;
 }) {
+  const done = span("RENDER [id]/page (Overview)");
   const { id } = await params;
   const { error, created } = await searchParams;
 
@@ -66,6 +68,7 @@ export default async function ClientOverviewPage({
     : null;
 
   const latest = measurements[0];
+  done();
 
   return (
     <div className="flex flex-col gap-4 px-8 py-[22px]">
