@@ -214,6 +214,15 @@ export type ClientDetail = {
   lastCheckin: string | null;
 };
 
+/** Just the client row. The detail header renders from this alone. */
+export const getClient = cache(async (id: string): Promise<Client | null> => {
+  const supabase = await createClient();
+  const { data } = await timed("query clients.single", () =>
+    supabase.from("clients").select("*").eq("id", id).single(),
+  );
+  return (data as Client | null) ?? null;
+});
+
 /**
  * The client row, their check-ins and their measurements.
  *
@@ -224,14 +233,13 @@ export type ClientDetail = {
  * The three queries run together rather than in sequence. The client row used to
  * gate the other two so a missing client skipped them, but a missing client is
  * the rare case and the gate cost a whole Supabase round trip on every load.
+ * It comes from `getClient` so the layout's header query is the same one.
  */
 export const getClientDetail = cache(async (id: string): Promise<ClientDetail | null> => {
   const supabase = await createClient();
 
-  const [{ data: client }, { data: checkins }, { data: measurements }] = await Promise.all([
-    timed("query clients.single", () =>
-      supabase.from("clients").select("*").eq("id", id).single(),
-    ),
+  const [client, { data: checkins }, { data: measurements }] = await Promise.all([
+    getClient(id),
     timed("query daily_checkins", () =>
       supabase
         .from("daily_checkins")
@@ -254,7 +262,7 @@ export const getClientDetail = cache(async (id: string): Promise<ClientDetail | 
   const dates = rows.map((r) => r.date);
 
   return {
-    client: client as Client,
+    client,
     checkins: rows,
     measurements: (measurements ?? []) as Measurement[],
     compliance: compliancePct(dates, client.start_date),

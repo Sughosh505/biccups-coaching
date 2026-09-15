@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getClientDetail } from "@/lib/queries/coach";
+import { getClient } from "@/lib/queries/coach";
 import { daysBetween, today } from "@/lib/metrics";
 import { Avatar, ButtonLink, StatusChip } from "@/components/ui";
 import { ChevronLeftIcon } from "@/components/icons";
@@ -16,10 +16,10 @@ export default async function ClientLayout({
 }) {
   const done = span("RENDER [id]/layout");
   const { id } = await params;
-  const detail = await getClientDetail(id);
-  if (!detail) notFound();
-
-  const { client } = detail;
+  // The header shows a name, a status and a start date. It used to pull every
+  // check-in and measurement to do it, on every tab.
+  const client = await getClient(id);
+  if (!client) notFound();
   const days = client.start_date ? daysBetween(client.start_date, today()) : null;
 
   const subtitle = [
