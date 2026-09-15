@@ -37,10 +37,17 @@ const CLIENT = flag("client");
 const APPLY = has("apply");
 const SKIP_BAD = has("skip-bad");
 const OVERWRITE = has("overwrite");
+// Columns to leave out of notes. Everything not mapped to a field of its own is
+// carried into notes by default so no column of the sheet is lost; this is the
+// escape hatch for ones that only repeat what the row already says.
+const IGNORE = (flag("ignore") ?? "")
+  .split(",")
+  .map((s) => s.trim().toUpperCase())
+  .filter(Boolean);
 
 if (!FILE || !CLIENT) {
   console.error(
-    "usage: node scripts/import-checkins.mjs --file <csv> --client <name|uuid> [--apply] [--skip-bad] [--overwrite]",
+    'usage: node scripts/import-checkins.mjs --file <csv> --client <name|uuid> [--apply] [--skip-bad] [--overwrite] [--ignore "Col,Col"]',
   );
   process.exit(2);
 }
@@ -260,16 +267,24 @@ const IDX = {
 const missing = Object.entries(IDX).filter(([, i]) => i === -1).map(([k]) => k);
 if (missing.length) console.log(`note: no column found for ${missing.join(", ")} — those stay null`);
 
-// Every workbook grew its own extra columns. The app's schema is the standard the
-// sheets are being normalised onto, so these are dropped on purpose — but say so,
-// because a column vanishing without a word is how a migration loses data quietly.
+// Every workbook grew its own extra columns — FIBRE DRINK, PROTEIN SHAKE, and so
+// on. The app's schema is the standard the sheets are normalised onto, so these
+// have no field of their own, but they are still something the coach chose to
+// track: they are carried into the check-in's notes rather than dropped.
+//
+// WEEK is the exception and always has been. It is a merged label for a band of
+// rows, not a value, and the app derives its own week bands from the dates.
 const mapped = new Set(Object.values(IDX).filter((i) => i !== -1));
-const ignored = header
+const extra = header
   .map((h, i) => [h.trim().replace(/\s+/g, " "), i])
   .filter(([h, i]) => h !== "" && !mapped.has(i) && !/^WEEK$/i.test(h))
-  .map(([h]) => h);
-if (ignored.length) console.log(`note: no place in the app for ${ignored.join(", ")} — not imported`);
-if (missing.length || ignored.length) console.log("");
+  .filter(([h]) => !IGNORE.includes(h.toUpperCase()));
+if (extra.length) {
+  console.log(`note: ${extra.map(([h]) => h).join(", ")} have no field of their own — kept in notes`);
+}
+const skipped = IGNORE.length ? ` (ignoring ${IGNORE.join(", ")})` : "";
+if (missing.length || extra.length) console.log(`${skipped}
+`.trimStart());
 
 const cell = (row, i) => (i === -1 ? "" : (row[i] ?? ""));
 
@@ -336,17 +351,25 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   if (sleep.note) notes.push(`${date}: bedtime ${sleep.note}`);
 
   // sleep_quality, hunger and stress carry `check (x between 1 and 10)`. The sheet
-  // has values outside that — a 0 in HUNGER, on a column whose own header says
-  // LOW=1. Postgres would reject the whole row, so they are reported and nulled.
-  const scale = (label, got) => {
+  // has values outside that — a 0 in HUNGER on a column whose own header says
+  // LOW=1, and a date that landed in STRESS. Postgres would reject the whole row,
+  // so the column is left blank and the original is kept in notes: the value is
+  // wrong for the field, which is not the same as it never having been written.
+  const scale = (label, got, original) => {
     if (got.value === null) return null;
     const v = Math.round(got.value);
     if (v < 1 || v > 10) {
-      problems.push(`${date}: ${label} is ${got.value}, outside the 1-10 the column allows — storing blank`);
+      const raw = String(original ?? got.value).trim();
+      problems.push(`${date}: ${label} is "${raw}", outside the 1-10 the column allows — kept as a note`);
+      carried.push(`${label}: ${raw}`);
       return null;
     }
     return v;
   };
+
+  const qualityValue = scale("sleep quality", quality, cell(row, IDX.quality));
+  const hungerValue = scale("hunger", hunger, cell(row, IDX.hunger));
+  const stressValue = scale("stress", stress, cell(row, IDX.stress));
 
   // A row carrying a single stray value is usually a mis-keyed cell on a date the
   // client never checked in for. It still counts as a compliant day once imported,
@@ -360,7 +383,14 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   }
 
   const ownNote = isBlank(cell(row, IDX.notes)) ? null : String(cell(row, IDX.notes)).trim();
-  const noteParts = [ownNote, ...carried].filter(Boolean);
+
+  // Anything the sheet tracks that the app has no field for. Written as
+  // "HEADER: value" so the coach can still read what it was.
+  const extras = extra
+    .filter(([, i]) => !isBlank(cell(row, i)))
+    .map(([h, i]) => `${h}: ${String(cell(row, i)).trim()}`);
+
+  const noteParts = [ownNote, ...extras, ...carried].filter(Boolean);
 
   // daily_checkins_lyfta_link_https rejects anything else, so a non-https link is
   // kept as a note rather than failing the whole row.
@@ -396,11 +426,11 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     supplements_taken: supplements.value,
     sleep_time: sleep.value,
     sleep_duration_hrs: sleepHrs.value,
-    sleep_quality: scale("sleep quality", quality),
+    sleep_quality: qualityValue,
     water_intake_l: water.value,
-    hunger: scale("hunger", hunger),
+    hunger: hungerValue,
     digestion_issues: digestion.value,
-    stress: scale("stress", stress),
+    stress: stressValue,
   });
 }
 
