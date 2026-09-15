@@ -82,6 +82,11 @@ Paste into `src/app/globals.css`. Tailwind v4, so tokens are CSS variables in `@
 **All numerics use Geist Mono with `font-variant-numeric: tabular-nums`** — weights, steps, calories, dates, times,
 percentages, counts, deltas, axis labels. This is not decorative; columns must align. Prose never uses mono.
 
+**Archivo** is the third face, loaded in `layout.tsx` as `--font-display`. It is used **only inside the §4
+Plan document**, for the masthead and the inverted section bars — nothing on screen uses it. The plan
+document is a printed artefact with a letterhead, and Geist has no weight heavy enough to carry one. It
+is scoped to `.pdoc`, so it cannot leak into a screen.
+
 ### Desktop (coach)
 
 | Role | Size | Weight | Tracking | Colour |
@@ -323,7 +328,83 @@ link but no split still shows the section, with the button and no week card.
 The anchor carries `target="_blank"` and `rel="noopener noreferrer"` — noopener stops the opened tab
 reaching back through `window.opener`, noreferrer keeps the client's plan URL out of Lyfta's referer log.
 
+### Plan document (print) — added in Phase 13
+
+What the client **keeps** is not the screen they scroll. A consultation client never sees the app at all
+(D-14) — this document is the entire product they paid for — so it is a designed two-page A4 letterhead,
+not the plan view on paper. It renders only inside `@media print`, on exactly two routes:
+`/coach/plans/[id]/preview` and `/client/plan`. On screen it is `display: none`; the plan view is
+unchanged and is `print:hidden` on those two routes instead.
+
+**Geometry.** `@page { size: A4; margin: 12mm }` gives a 186 × 273mm content box. Each `.pdoc-page` is
+that size **exactly** — a fixed height, not a minimum, so `margin-top: auto` pins the black page-footer
+bar to the foot of the sheet. Page one carries `break-after: page`; `:last-of-type` clears it, or Firefox
+emits a blank third page. An over-long plan therefore grows onto a third page rather than being clipped:
+there is deliberately no `overflow: hidden`, because silently truncating a client's meals is worse than a
+visibly wrong PDF. The guards are the `char_length` CHECKs on the columns and the row budget below.
+
+**Palette — literals, not tokens (D-19).** The document is pure black on white with fully inverted bars,
+which the §1 ramp cannot express. Five values, hardcoded in `.pdoc-*` classes:
+
+| Role | Value |
+|---|---|
+| Ink, bars, card borders | `#000000` |
+| Paper, text on bars | `#FFFFFF` |
+| Leader-row captions | `#555555` |
+| Rest days and em-dashes | `#8A8A8A` |
+| Dotted leaders | `#767676` |
+| Write-in rules (pen goes on top) | `#B0B0B0` |
+
+**Type scale.** Archivo for the masthead and section bars, Geist for everything else, `.tnum` for every
+number.
+
+| Element | Size / weight / tracking |
+|---|---|
+| Masthead line 1 | 26pt / 700 / -0.01em |
+| Masthead line 2 (`BY BICCUPSS`) | 9pt / 600 / 0.28em |
+| Client bar | 7.5pt / 600 / 0.10em, uppercase |
+| Card title bar | 7.5pt / 700 / 0.14em, uppercase |
+| Leader label | 7.5pt / 600, uppercase · caption 6pt `#555` italic |
+| Leader value | 8.5pt `.tnum` |
+| Table head · body | 6.5pt / 700 / 0.12em · 7.5pt |
+| Footer strip · page footer | 6.5pt / 600 |
+
+**Three primitives.**
+
+- **Dotted leader** — `.pdoc-lead` is a `flex: 1` filler with `height: 0` and `border-bottom: 0.3mm dotted`,
+  `align-self: center`. Height zero and centred puts the dots on the row's optical centre; a border on the
+  label itself would sit on its baseline.
+- **Tick circle** — `3.4mm`, `border: 0.3mm solid #000`, `border-radius: 50%`, **no fill**, so it survives a
+  browser dropping backgrounds. Seven per habit row, one per weekday.
+- **Write-in rule** — `border-bottom: 0.3mm dotted #B0B0B0`, fainter than a leader because a pen goes on
+  top of it. Used for WK 4/8/12, NOTES / LOGGED SETS, and the notes block.
+
+**Page 1** — black masthead (`PERSONALIZED CONSULTATIONS.` / `BY BICCUPSS`); black client bar
+(CLIENT · AGE · GENDER · PLAN); **CLIENT PROFILE** card of leader rows; **SUPPLEMENTS** table
+(SUPPLEMENT · BRAND · DOSE · TIME); **DAILY HABITS** table (HABIT · TARGET · seven tick circles) closing
+with a SPLIT LINK leader row; **WEEKLY TRAINING SPLIT** table (DAY · FOCUS · REP RANGE · INTENSITY ·
+NOTES / LOGGED SETS); a bordered footer strip (WARM UP · REP RANGE · INTENSITY · SLEEP · WATER); black
+page footer `PAGE 1 OF 2 · BICCUPSS.IN`.
+
+**Page 2** — `NUTRITION & PROGRESS` heading with CLIENT and DAILY INTAKE at the right; **NUTRITION PLAN**
+table, one bold row per meal group and a lighter sub-row of its foods, closing with an inverted
+`DAILY TOTAL` row; **RECOMMENDED BRANDS** and **PROGRESS TRACKER** side by side; **NOTES & CHECK-IN**
+ruled block ending in a bordered NOTE line; black page footer
+`PREPARED BY BICCUPSS · BICCUPSS.IN · CONFIDENTIAL — FOR CLIENT USE ONLY` and `PAGE 2 OF 2`.
+
+**Row budget**, beyond which the sheet grows to a third page: 6 meal groups, 10 supplements, 5 habits,
+8 recommended brands, a 200-character conditions string.
+
+**Printing it.** A4, and **Headers and footers off** in the browser dialog, or Chrome's own URL and date
+collide with the document's page footer. Background graphics may be left off: `.pdoc` restates
+`print-color-adjust: exact`, which is what keeps the black bars solid.
+
 ### Print sheet (plan view) — added in Phase 9
+
+> **Superseded for the plan routes by §4 Plan document (D-18).** `/coach/plans/[id]/preview` and
+> `/client/plan` now print that document instead, and the plan view is `print:hidden` there. This sheet
+> stays as the **global fallback** for any other screen someone presses Ctrl-P on: without it, near-white
+> text prints onto a dropped background and the page comes out blank. Everything below still describes it.
 
 The plan is the one screen a client keeps, so it has to survive leaving the app. Lives entirely inside
 `@media print` in `globals.css`: nothing renders it on screen, and D-13 does not reopen the no-light-theme
@@ -369,13 +450,14 @@ and preview caption.
 Chrome's Save-as-PDF preserves `<a href>` as a live link. In print it becomes a labelled URL in mono —
 readable printed, still tappable in the PDF.
 
-**Print-only document header** (`hidden print:block`): client name, plan title, `updated <date>`, and the
-coach's name when the session can resolve it. On screen the reader knows whose plan they are looking at;
-in a file that left the app, nobody does.
+~~**Print-only document header** (`hidden print:block`): client name, plan title, `updated <date>`, and
+the coach's name when the session can resolve it.~~ **Removed in Phase 13** — `PlanPrintHeader.tsx` is
+deleted and the §4 Plan document names itself far more thoroughly.
 
-**Width is unchanged.** The 430px client-shell cap holds in print (§9). The PDF is read on a phone far
-more often than it is put on paper, and widening it would restretch the macro bar and every card header
-— that is a second layout, which this deliberately is not.
+~~**Width is unchanged.** The 430px client-shell cap holds in print (§9).~~ **Superseded in Phase 13
+(D-18).** The plan document is A4-wide and escapes the cap — it *is* the second layout this paragraph
+ruled out, and the reasoning changed with it: a consultation client never scrolls the plan on a phone,
+because they have no account at all.
 
 **Page breaks.** Cards carry `break-inside: avoid` from the shared §4 Card — a meal group split across a
 page boundary is the main way a printed plan goes wrong. `.sec` and `.lbl` carry `break-after: avoid` so a
@@ -543,6 +625,42 @@ Freeform per D-3: any number of photos per date, no front/side/back slots, so th
 desktop and scrolls horizontally on phone. The coach's tiles carry a delete control in the top-right;
 the client's are read-only — clients never add, replace or delete a progress photo, and that is
 enforced by the storage policy, not the absence of a button.
+
+### Client shortcut links (coach) — added in Phase 12
+
+A row of **Secondary** buttons directly under the client header on `/coach/clients/[id]`, gap 10px,
+shown only when the client has the link. Each carries a 15px icon at 1.8 stroke in `--color-muted-2`:
+
+| Button | Icon | Opens |
+|---|---|---|
+| **Lyfta programme** | `DumbbellIcon` | `clients.lyfta_link` |
+| **Macros** | `ImageIcon` | `clients.macros_link` |
+
+Both `target="_blank"` with `rel="noopener noreferrer"`, and https-only — the server action refuses
+anything else with a sentence rather than saving a link that silently never opens.
+
+**Coach-only, and not shown on any client screen.** `macros_link` points into the coach's own Drive,
+which would give the client a permission page, and the client already has the real macros on their
+plan. Edited from the §4 Form's Coaching card. See D-17.
+
+### Drive photo tile (coach) — added in Phase 12
+
+A progress photo that predates the app and still lives in the coach's Drive. Same 150×110 tile as an
+uploaded photo, but the tile **is** the link: centred column, gap 6px, a 18px `ExternalLinkIcon` over
+**Open in Drive** in 11px/500, both `--color-muted-2` moving to `ink-2` on hover. `target="_blank"`
+with `rel="noopener noreferrer"`, as every outbound link in the app carries.
+
+It cannot render inline — Drive answers with a permission page, not an image.
+
+**The check-in table's food-photo indicator follows the same rule.** On
+`/coach/clients/[id]/checkins` the `ImageIcon` is plain when the photo was uploaded in-app (it is shown
+on the check-in itself) and becomes an anchor in `--color-muted` when the day carries a
+`diet_photo_link`, sitting beside the Lyfta session link it already shares a row with.
+
+**Coach-only, and not by a policy.** Drive enforces its own permissions, so the file opens for its
+owner and nobody else. The client's gallery filters these rows out in the query rather than showing a
+tile that would hand them a Google error. RLS still returns the row: it is theirs, it is just not
+useful to them. See D-16.
 
 ### Slider (1–10 scales)
 
@@ -809,6 +927,31 @@ opens a group. Supplements with no timing fall into a final group labelled `Any 
 **An unpublished or absent plan is an EmptyState, not a blank screen.** The client plan view says what will
 appear there and who puts it there, per §4 EmptyState.
 
+**The plan document prints flat supplements, not grouped ones.** The §4 Plan document's SUPPLEMENTS table
+is one row per supplement in `sort_order`, with its own TIME column. The grouping rule above governs the
+*screen*, where a card per timing reads better than a fourth column; on paper the coach's template is a
+table and a table wants one row per thing.
+
+**A meal group's foods print as one sub-row joined with ` · `.** A group with no foods renders no sub-row
+at all rather than an empty one.
+
+**`DAILY TOTAL` on the document is `planTotals()`** — computed, never stored, counting only groups with
+all four macros (as above). The document does **not** print the "3 of 5 meals have macros" warning: that is
+a signal to the coach that the plan is unfinished, and it belongs in the builder rail, not in the file a
+client receives.
+
+**Page 2's `DAILY INTAKE` is the prescription, not the sum.** It prints `calorie_intake` — free text,
+because it is usually a range like `2250–2300` — and falls back to `formatCalories(totals.calories)` when
+the coach has not set one. The two numbers legitimately differ: one is the target, the other is what the
+meals add up to.
+
+**Rest days on the document print greyed `REST` with em-dashes** in REP RANGE and INTENSITY. What counts as
+a rest day is already decided by `splitWeek()`; the document does not re-decide it.
+
+**The PROGRESS TRACKER's BASELINE column is the plan snapshot** (`weight_kg`, `body_fat_pct`, `waist_cm`,
+`chest_cm`), and WK 4 / WK 8 / WK 12 are always blank write-in cells. The document is a worksheet at that
+point, not a report.
+
 ## 8. Accessibility
 
 - Every interactive control is **≥ 44px** on its smallest dimension on phone. Desktop rows are ≥ 36px.
@@ -824,6 +967,10 @@ appear there and who puts it there, per §4 EmptyState.
 
 | # | Decision |
 |---|---|
+| D-18 | The printed plan is a **branded two-page A4 document**, not the screen on paper. It renders only in `@media print`, on `/coach/plans/[id]/preview` and `/client/plan`, where the on-screen plan view is `print:hidden`. What a client scrolls and what they keep are different artefacts, and a consultation client only ever sees the document — they have no account (D-14), so this file is the whole product they paid for. Its tick circles and write-in cells are deliberately empty: it is meant to be filled in with a pen. |
+| D-19 | The document uses **hardcoded `#000`/`#fff` in scoped `.pdoc-*` classes, not the §1 tokens**. D-13's sheet re-points a dark ramp onto a light *grey* ramp; this is pure black on white with fully inverted bars, which a grey ramp cannot express, and forcing the tokens to black and white would wreck the fallback for every other screen. The document never uses a token utility class, so the two print styles cannot collide — and D-13's sheet stays as the global Ctrl-P fallback. |
+| D-20 | The profile numbers on the document are a **snapshot on the plan** (`plan_notes`), never a live read of `clients`. Consultation clients have no metric columns at all, so there is nothing to join to; and a plan sent in March must still read as it did in March, because the file in someone's inbox cannot be edited afterwards. The builder prefills a blank field from the client record once, and editing it there never writes back. **`goal_bf` never prefills the body-fat estimate** — one is a goal, the other is what they are now, and printing the first as the second on a client-facing document is a lie. |
+| D-21 | `rep_range`, `intensity` and `warm_up` are **plan-level, not per training day**, and so are `sleep_target` and `water_target`. Every training day on the coach's own template repeats the same rep range and intensity, and the page-1 footer strip needs all five as plan defaults. The two habit-shaped ones duplicate a `plan_habits` row on purpose: the alternative is a footer that finds its values by string-matching habit names, which breaks the first time the coach types "Water" instead of "Water intake". Two columns are cheaper than a parser. |
 | — | Dark only. No light theme, no toggle. |
 | — | One accent (`#C6F24E`), doubling as the positive colour. |
 | — | Coach = desktop. Client = phone-first, scaling up. |
@@ -856,6 +1003,8 @@ appear there and who puts it there, per §4 EmptyState.
 | D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
 | D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
 | D-10 | ~~The consultation login's first password is **generated, not typed**, and shown once.~~ **Superseded by D-14** — there is no consultation login. The rule still governs `createClientLogin` for coaching clients: the admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on `/client/account`. |
+| D-17 | **The Lyfta programme and macros links live on the client, not the plan.** `plan_notes.lyfta_link` stays as it is — that one is handed over *with* a plan and the client taps it on their plan screen (D-7). These two belong to the person: they survive the coach deleting and rebuilding a plan, and they work before a plan exists at all, which is when the coach most needs them. `macros_link` is usually a picture in the coach's Drive, for macros the app does not hold — which is also why neither is rendered on a client screen. |
+| D-16 | **Progress photos from before the app stay in Google Drive.** The coach's sheets hold years of dated Drive links, and moving the files would be a migration that can lose them for no gain — the coach already browses them there. So `progress_photos` carries either an uploaded `photo_url` or a `drive_link`, never neither, and the coach's gallery renders a link tile for the second kind. **Clients do not see them**, because Drive would refuse them anyway; new in-app uploads behave exactly as D-11 describes. This is a one-way door only for history: nothing new should ever be filed as a Drive link. |
 | D-15 | **A consultation can be created and edited by hand.** The Google Form webhook stays the primary path; this is the fallback, because its failures are silent and a missed submission was previously unrecoverable without hand-writing `jsonb` in the dashboard. Hand entry shares the webhook's caps (`src/lib/consultation-input.ts`) but **refuses instead of truncating** — an anonymous endpoint that cannot report back should keep a shortened answer, a coach watching one save short would never notice. `form_response_id` stays null and is not settable: a real one would make a later genuine delivery collide, and the route turns a collision into a silent `200`. **Delete refuses while a plan still points at the record**, because `plans.owner_id` has no foreign key and would be orphaned. |
 | D-14 | **Consultation clients have no login.** D-13 made the plan a PDF the coach sends, which is what the account existed to deliver. The account cost a hand-delivered password, no email, no resend and no recovery — for a document read once. Removed in Phase 10: the `consultation_client` role, `/plan`, `current_consultation_client_id()` and `consultation_clients.auth_user_id` are all gone. **`plans.owner_type` keeps both values** — the coach still builds plans for consultation clients, they just do not log in to read one. |
 | D-13 | The plan view has a **light print sheet**, so the plan can leave the app as a PDF the client keeps without logging in. It is scoped to `@media print` and is **not** a second theme: nothing renders it on screen and there is still no toggle. Built by re-pointing the §1 tokens, not by restyling components — see §4 Print sheet. Near-black is expensive on paper, and a document a client is meant to keep should not require an account to re-read. |
@@ -865,9 +1014,12 @@ appear there and who puts it there, per §4 EmptyState.
 
 - Login screen
 - Loading skeletons and toast states (empty and inline error states are now specced in §4)
-- ~~Print stylesheet for the plan view~~ — **built in Phase 9.** Light print sheet for the plan routes
-  only, by re-pointing the §1 tokens inside `@media print`. Specced in §4 Print sheet (plan view); the
-  decision is D-13.
+- ~~Print stylesheet for the plan view~~ — **built in Phase 9**, then **superseded for the plan routes in
+  Phase 13.** The plan routes print the §4 Plan document (D-18); the Phase 9 token sheet remains as the
+  global Ctrl-P fallback for every other screen.
+- **Per-day rep ranges and intensity** (D-21). Today these are three plan-level fields repeated on every
+  training day. Per-day values would need a `plan_split_days` child table to replace the `split_days`
+  array — ask before building it.
 
 ## 11. Implementation notes
 
@@ -886,3 +1038,8 @@ appear there and who puts it there, per §4 EmptyState.
   range selector and the desktop hover readout need JS. The series is fetched server-side and passed down
   whole, so switching range filters in memory and never refetches. Everything around it stays a server
   component; do not let "use client" spread up into the page.
+- **Phase 13 deleted `PlanPrintHeader.tsx`.** Its two call sites now render `PlanDocument`, which names the
+  document far more thoroughly than a title and a date could. `plan_notes` is also no longer literally
+  notes: it is the one row of plan-level fields, carrying the D-20 profile snapshot alongside the split and
+  the general notes. Renaming the table would have touched two policies, the `save_plan` RPC, every query
+  and every type for no behaviour change, so the name stays and this note explains it.

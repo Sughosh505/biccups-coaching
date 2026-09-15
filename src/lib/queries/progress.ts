@@ -22,7 +22,13 @@ export type MeasurementRow = {
 
 export type PhotoDay = {
   date: string;
-  photos: { id: string; url: string | null; notes: string | null }[];
+  photos: {
+    id: string;
+    url: string | null;
+    /** Set instead of `url` for history still sitting in the coach's Drive. */
+    driveLink: string | null;
+    notes: string | null;
+  }[];
 };
 
 export type ClientProgress = {
@@ -85,6 +91,7 @@ async function signAll(
     day.photos.push({
       id: photo.id,
       url: photo.photo_url ? (signed.get(photo.photo_url) ?? null) : null,
+      driveLink: photo.drive_link,
       notes: photo.notes,
     });
   }
@@ -127,7 +134,12 @@ export async function getOwnProgress(): Promise<ClientProgress> {
     supabase.from("measurements").select("*").order("date", { ascending: false }),
     supabase
       .from("progress_photos")
+      // Photos that live in the coach's Drive are skipped, not hidden: Drive
+      // enforces its own permissions, so the link would open a Google error page
+      // for the client rather than their photo. RLS still returns the row — this
+      // is a UI decision about what is useful to show, not a boundary.
       .select("*")
+      .not("photo_url", "is", null)
       .order("date", { ascending: false })
       .order("created_at", { ascending: true }),
   ]);

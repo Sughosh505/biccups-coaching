@@ -46,3 +46,11 @@ next-env.d.ts
 
 # Supabase CLI scratch
 supabase/.temp
+scratch/
+
+# Real client data. Spreadsheets exported from the coach's Drive hold named
+# people's health information and must never reach the repo, which is public on
+# GitHub. Keep them outside the working tree or under scratch/.
+*.xlsx
+*.xls
+client-data/

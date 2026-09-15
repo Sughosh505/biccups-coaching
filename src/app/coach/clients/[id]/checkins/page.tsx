@@ -11,6 +11,7 @@ import {
 import { Card, EmptyState, toneText } from "@/components/ui";
 import { DumbbellIcon, ImageIcon, InfoIcon } from "@/components/icons";
 import type { DailyCheckin } from "@/lib/types";
+import { span } from "@/lib/timing";
 
 // The 12-column spec is the artboard's — docs/frontend/canvas/ClientCheckins.dc.html.
 const COLUMNS =
@@ -92,11 +93,27 @@ function CheckinRow({ checkin }: { checkin: DailyCheckin }) {
         {num(checkin.stress)}
       </span>
       <span className="flex items-center gap-2.5">
-        <ImageIcon
-          size={15}
-          strokeWidth={1.8}
-          className={checkin.diet_photo_url ? "text-muted" : "text-border"}
-        />
+        {/* A food photo from before the app is a Drive link, and Drive will not
+            serve it inline — so the indicator becomes the link itself. An uploaded
+            photo keeps the plain icon: it is shown on the check-in itself. */}
+        {checkin.diet_photo_link ? (
+          <a
+            href={checkin.diet_photo_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open the food photo in Drive"
+            aria-label={`Open the food photo from ${checkin.date} in Drive`}
+            className="text-muted transition-colors hover:text-ink-2"
+          >
+            <ImageIcon size={15} strokeWidth={1.8} />
+          </a>
+        ) : (
+          <ImageIcon
+            size={15}
+            strokeWidth={1.8}
+            className={checkin.diet_photo_url ? "text-muted" : "text-border"}
+          />
+        )}
         {sessionLink(checkin.lyfta_link) && !checkin.rest_day ? (
           <a
             href={sessionLink(checkin.lyfta_link) as string}
@@ -180,6 +197,7 @@ export default async function ClientCheckinsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ range?: string }>;
 }) {
+  const done = span("RENDER [id]/checkins");
   const { id } = await params;
   const { range } = await searchParams;
 
@@ -192,6 +210,7 @@ export default async function ClientCheckinsPage({
 
   const visible = from ? detail.checkins.filter((c) => c.date >= from) : detail.checkins;
   const bands = groupIntoWeeks(visible, detail.client.start_date, now, from);
+  done();
 
   return (
     <div className="flex flex-col gap-3.5 px-8 py-5">

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireCoach } from "@/lib/auth";
 import { getPlan, getPlanOwner } from "@/lib/queries/plan";
 import { PlanView } from "@/components/plan/PlanView";
-import { PlanPrintHeader } from "@/components/plan/PlanPrintHeader";
+import { PlanDocument } from "@/components/plan/PlanDocument";
 import { PrintButton } from "@/components/plan/PrintButton";
 import { StatusChip } from "@/components/ui";
 import { ChevronLeftIcon } from "@/components/icons";
@@ -40,7 +40,7 @@ export default async function PlanPreviewPage({ params }: { params: Promise<{ id
   const owner = await getPlanOwner(full.plan.owner_type, full.plan.owner_id);
   const published = Boolean(full.plan.published_at);
 
-  // print:p-0 on the wrapper — on paper the page margin is @page's 14mm and nothing
+  // print:p-0 on the wrapper — on paper the page margin is @page's 12mm and nothing
   // else; the screen gutter would stack on top of it.
   return (
     <div className="flex flex-col gap-[18px] px-[30px] py-[26px] print:p-0">
@@ -70,17 +70,13 @@ export default async function PlanPreviewPage({ params }: { params: Promise<{ id
         <PrintButton />
       </div>
 
-      {/* The 430px cap holds in print too (DESIGN.md §9). The PDF is read on a
-          phone far more often than it is put on paper, and widening it would
-          restretch the macro bar and every card header — a second layout, which
-          the print sheet deliberately is not. */}
-      <div className="mx-auto w-full max-w-[430px] pb-8">
-        <PlanPrintHeader
-          clientName={owner.name}
-          planTitle={full.plan.title}
-          updatedAt={full.plan.updated_at}
-          coachName={displayName}
-        />
+      {/* The document is a SIBLING of the capped column rather than inside it:
+          it is A4-wide, and hiding the whole screen tree in print is cleaner than
+          trying to unpick a max-width from underneath it (DESIGN.md D-18). */}
+      <PlanDocument {...full} clientName={owner.name} />
+
+      {/* The 430px cap is the screen layout, and in print it goes entirely. */}
+      <div className="mx-auto w-full max-w-[430px] pb-8 print:hidden">
         <header className="flex flex-col gap-1.5 pb-[22px] print:hidden">
           <h2 className="text-[25px] font-semibold tracking-[-0.025em]">Your plan</h2>
           <span className="text-[13.5px] text-muted">

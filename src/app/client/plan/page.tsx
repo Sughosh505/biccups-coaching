@@ -4,8 +4,18 @@ import { formatShortDate } from "@/lib/metrics";
 import { Card, EmptyState } from "@/components/ui";
 import { PlanIcon } from "@/components/icons";
 import { PlanView } from "@/components/plan/PlanView";
-import { PlanPrintHeader } from "@/components/plan/PlanPrintHeader";
+import { PlanDocument } from "@/components/plan/PlanDocument";
 import { PrintButton } from "@/components/plan/PrintButton";
+
+/**
+ * Chrome's Save-as-PDF takes its filename from the document title. Without this
+ * the client's own copy saves as "Biccups.pdf", inherited from the root layout —
+ * the coach's preview route has always set one, this side never did.
+ */
+export async function generateMetadata() {
+  const { client } = await requireClient();
+  return { title: client.name ? `${client.name} — Plan` : "Plan" };
+}
 
 export default async function ClientPlanPage() {
   const { clientId, client } = await requireClient();
@@ -30,21 +40,15 @@ export default async function ClientPlanPage() {
         {full ? <PrintButton /> : null}
       </header>
 
-      <div className="px-5 pb-6 pt-[22px]">
+      {/* The printed artefact, outside the screen tree entirely — DESIGN.md D-18.
+          It carries no coach byline: a client session cannot read `profiles`, and
+          the document names Biccupss itself in its footer regardless. */}
+      {full ? <PlanDocument {...full} clientName={client.name} /> : null}
+
+      <div className="px-5 pb-6 pt-[22px] print:hidden">
         {full ? (
-          <>
-            <PlanPrintHeader
-              clientName={client.name}
-              planTitle={full.plan.title}
-              updatedAt={full.plan.updated_at}
-              // Not readable from a client session, and widening a profiles
-              // policy for a byline is not worth the boundary. The copy the
-              // coach sends does carry it — they print it from their own side.
-              coachName={null}
-            />
-            {/* PlanView falls back to "Notes from your coach" for the same reason. */}
-            <PlanView {...full} coachName={null} />
-          </>
+          /* PlanView falls back to "Notes from your coach" — same reason. */
+          <PlanView {...full} coachName={null} />
         ) : (
           <Card className="rounded-[13px]">
             <EmptyState

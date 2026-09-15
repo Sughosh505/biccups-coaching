@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { span, timed } from "@/lib/timing";
 
 // A role with no entry here has no home, and the block below signs it out rather
 // than guessing — which is what retires a consultation_client account left over
@@ -12,6 +13,14 @@ const ROLE_HOME: Record<string, string> = {
 const PUBLIC_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
+  const done = span(`proxy ${request.nextUrl.pathname}`);
+  const kind = request.headers.get("next-router-prefetch")
+    ? "PREFETCH"
+    : request.headers.get("rsc")
+      ? "rsc-nav"
+      : "document";
+  const rsc = request.nextUrl.searchParams.get("_rsc");
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -35,14 +44,18 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Verified against the project's ES256 JWKS, not taken on trust from the
+  // cookie, and still refreshed when expired — see the note on getActor in
+  // src/lib/auth.ts. This runs on every request the matcher covers, so the
+  // round trip getUser() used to make here was the single most repeated call
+  // in the app.
+  const { data: claims } = await timed("  proxy getClaims", () => supabase.auth.getClaims());
+  const userId = claims?.claims?.sub ?? null;
 
   const { pathname } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
 
-  if (!user) {
+  if (!userId) {
     if (isPublicPath) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -50,11 +63,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data: profile } = await timed("  proxy profiles.single", () =>
+    supabase.from("profiles").select("role").eq("id", userId).single(),
+  );
 
   const role = profile?.role as string | undefined;
   const home = role ? ROLE_HOME[role] : undefined;
@@ -89,5 +100,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  done(`${kind} _rsc=${rsc ?? "-"}`);
   return response;
 }

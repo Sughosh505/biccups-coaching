@@ -7,7 +7,9 @@ import { TabBar } from "@/components/client/TabBar";
  */
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col">
+    // print:max-w-none — the plan document is A4-wide and this is the one cap a
+    // page underneath cannot escape on its own (DESIGN.md D-18).
+    <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col print:min-h-0 print:max-w-none">
       {children}
       <TabBar />
     </div>

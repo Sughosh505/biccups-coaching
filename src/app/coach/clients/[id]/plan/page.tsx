@@ -5,6 +5,7 @@ import { formatShortDate } from "@/lib/metrics";
 import { ButtonLink, Card, EmptyState, StatusChip } from "@/components/ui";
 import { PlanIcon, PlusIcon } from "@/components/icons";
 import { PlanView } from "@/components/plan/PlanView";
+import { span, timed } from "@/lib/timing";
 
 /**
  * The client detail "Plan" tab — the assigned plan exactly as the client reads
@@ -16,10 +17,14 @@ import { PlanView } from "@/components/plan/PlanView";
  * was given never means a detour through /coach/plans.
  */
 export default async function ClientPlanPage({ params }: { params: Promise<{ id: string }> }) {
-  const { displayName } = await requireCoach();
+  const done = span("RENDER [id]/plan");
+  const { displayName } = await timed("  plan requireCoach", () => requireCoach());
   const { id } = await params;
 
-  const full = await getPlanForOwner("coaching_client", id);
+  const full = await timed("  plan getPlanForOwner", () =>
+    getPlanForOwner("coaching_client", id),
+  );
+  done();
 
   if (!full) {
     return (

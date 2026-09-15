@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
   // 5MB server-side check in src/app/client/actions.ts.
   experimental: {
     serverActions: { bodySizeLimit: "6mb" },
+
+    // Every coach route is dynamic (they all read the session cookie), and the
+    // dynamic client cache defaults to 0 — so a prefetched tab was thrown away
+    // and refetched the moment it was clicked. 30s makes the prefetch count.
+    // Server actions call revalidatePath, which clears this, so a tab the coach
+    // just edited still comes back fresh.
+    staleTimes: { dynamic: 30 },
   },
 
   async headers() {

@@ -55,6 +55,10 @@ export function ClientForm({
         <CardHeader title="Body" />
         <div className="grid grid-cols-3 gap-x-5 gap-y-4 p-4">
           <Field label="Age" name="age" type="number" defaultValue={client?.age} />
+          {/* Free text, not a select: the only consumer is a line of print on the
+              plan document, and a fixed list is a product decision this app has no
+              reason to make. */}
+          <Field label="Gender" name="gender" defaultValue={client?.gender ?? ""} />
           <Field
             label="Height"
             name="height"
@@ -112,6 +116,21 @@ export function ClientForm({
             name="start_date"
             type="date"
             defaultValue={client?.start_date}
+          />
+          {/* Coach-facing shortcuts. Full https addresses — the database refuses
+              anything else, and the server action says so rather than saving a
+              link that would silently never open. */}
+          <Field
+            label="Lyfta programme"
+            name="lyfta_link"
+            defaultValue={client?.lyfta_link}
+            placeholder="https://lyfta.app/cp/…"
+          />
+          <Field
+            label="Macros"
+            name="macros_link"
+            defaultValue={client?.macros_link}
+            placeholder="https://drive.google.com/…"
           />
           <div className="col-span-2">
             <TextareaField

@@ -4,6 +4,7 @@ import { getClientDetail } from "@/lib/queries/coach";
 import { saveClient } from "@/app/coach/clients/actions";
 import { ClientForm } from "@/components/coach/ClientForm";
 import { ChevronLeftIcon } from "@/components/icons";
+import { span } from "@/lib/timing";
 
 export default async function EditClientPage({
   params,
@@ -12,11 +13,13 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
+  const done = span("RENDER [id]/edit");
   const { id } = await params;
   const { error } = await searchParams;
 
   const detail = await getClientDetail(id);
   if (!detail) notFound();
+  done();
 
   return (
     <div className="flex flex-col gap-[18px] px-[30px] py-[26px]">

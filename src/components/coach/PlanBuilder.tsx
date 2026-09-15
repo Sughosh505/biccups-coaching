@@ -7,12 +7,17 @@ import { useMemo, useState } from "react";
 import { Card, CardHeader } from "@/components/ui";
 import { AddButton, RemoveButton, TextInput } from "@/components/ui/controlled";
 import {
+  ALL_PROFILE_FIELDS,
   DAY_NAMES,
+  HABIT_FOOTER_FIELDS,
+  PROFILE_FIELDS,
+  TRAINING_FIELDS,
   formatCalories,
   formatMacro,
   macroShares,
   planTotals,
 } from "@/lib/plan";
+import type { ProfileField } from "@/lib/plan";
 import type { FullPlan } from "@/lib/types";
 
 type FoodRow = { key: number; name: string };
@@ -32,6 +37,8 @@ type SupplementRow = {
   dose: string;
   timing: string;
 };
+type HabitRow = { key: number; name: string; target: string };
+type BrandRow = { key: number; food: string; brand: string };
 
 const numText = (v: number | null) => (typeof v === "number" ? String(v) : "");
 
@@ -42,14 +49,48 @@ const key = () => ++uid;
 
 /* ---------------------------------------------------------------- Builder */
 
+/** One labelled control, driven by the shared field list so the builder, the
+ *  server action and the document can never disagree about what exists. */
+function ProfileInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: ProfileField;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="lbl">{field.label}</span>
+      <TextInput
+        ariaLabel={field.label}
+        value={value}
+        onChange={onChange}
+        placeholder={field.placeholder}
+        suffix={field.suffix}
+        numeric={field.kind !== "text"}
+      />
+    </div>
+  );
+}
+
 export function PlanBuilder({
   plan,
   groups: initialGroups,
   supplements: initialSupplements,
+  habits: initialHabits,
+  foodBrands: initialFoodBrands,
   notes,
   ownerName,
+  profileDefaults,
   action,
-}: FullPlan & { ownerName: string; action: (form: FormData) => void }) {
+}: FullPlan & {
+  ownerName: string;
+  /** Blank fields only, read once from the client record — DESIGN.md D-20. */
+  profileDefaults: Record<string, string>;
+  action: (form: FormData) => void;
+}) {
   const [title, setTitle] = useState(plan.title ?? "");
   const [groups, setGroups] = useState<GroupRow[]>(() =>
     initialGroups.map((g) => ({
@@ -76,6 +117,26 @@ export function PlanBuilder({
   );
   const [generalNotes, setGeneralNotes] = useState(notes?.general_notes ?? "");
   const [lyftaLink, setLyftaLink] = useState(notes?.lyfta_link ?? "");
+
+  const [habits, setHabits] = useState<HabitRow[]>(() =>
+    initialHabits.map((h) => ({ key: key(), name: h.name, target: h.target ?? "" })),
+  );
+  const [foodBrands, setFoodBrands] = useState<BrandRow[]>(() =>
+    initialFoodBrands.map((b) => ({ key: key(), food: b.food, brand: b.brand ?? "" })),
+  );
+
+  // Seeded per FIELD, not per plan: a plan saved before the coach filled in the
+  // client's height should still offer that height the next time it is opened.
+  const [profile, setProfile] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      ALL_PROFILE_FIELDS.map((f) => {
+        const saved = (notes as Record<string, unknown> | null)?.[f.key];
+        const value = saved ?? profileDefaults[f.key] ?? "";
+        return [f.key, value === null ? "" : String(value)];
+      }),
+    ),
+  );
+  const setField = (k: string, v: string) => setProfile((p) => ({ ...p, [k]: v }));
 
   const patchGroup = (k: number, patch: Partial<GroupRow>) =>
     setGroups((rows) => rows.map((r) => (r.key === k ? { ...r, ...patch } : r)));
@@ -110,9 +171,12 @@ export function PlanBuilder({
       dose: s.dose,
       timing: s.timing,
     })),
+    habits: habits.map((h) => ({ name: h.name, target: h.target })),
+    food_brands: foodBrands.map((b) => ({ food: b.food, brand: b.brand })),
     split_days: splitDays,
     general_notes: generalNotes,
     lyfta_link: lyftaLink,
+    profile,
   });
 
   const macroRail: [string, string, number][] = [
@@ -237,6 +301,28 @@ export function PlanBuilder({
           </div>
         </Card>
 
+        {/* --------------------------------------------------- Client profile */}
+        <Card>
+          <CardHeader
+            title="Client profile"
+            meta={
+              <span className="text-[11.5px] text-muted-2">
+                Printed on the PDF. Blanks are filled from the client record
+              </span>
+            }
+          />
+          <div className="grid grid-cols-3 gap-x-5 gap-y-4 p-4">
+            {PROFILE_FIELDS.map((f) => (
+              <ProfileInput
+                key={f.key}
+                field={f}
+                value={profile[f.key] ?? ""}
+                onChange={(v) => setField(f.key, v)}
+              />
+            ))}
+          </div>
+        </Card>
+
         {/* ------------------------------------------------------ Supplements */}
         <Card>
           <CardHeader
@@ -307,6 +393,135 @@ export function PlanBuilder({
           </div>
         </Card>
 
+        {/* ------------------------------------------------------ Daily habits */}
+        <Card>
+          <CardHeader
+            title="Daily habits"
+            meta={
+              <span className="text-[11.5px] text-muted-2">
+                Printed with seven empty circles the client ticks
+              </span>
+            }
+          />
+          <div className="flex flex-col gap-2.5 p-4">
+            {habits.length ? (
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] gap-2">
+                <span className="lbl">Habit *</span>
+                <span className="lbl">Target</span>
+                <span />
+              </div>
+            ) : null}
+
+            {habits.map((h) => {
+              const patchRow = (p: Partial<HabitRow>) =>
+                setHabits((rows) => rows.map((r) => (r.key === h.key ? { ...r, ...p } : r)));
+              return (
+                <div
+                  key={h.key}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] gap-2"
+                >
+                  <TextInput
+                    ariaLabel="Habit"
+                    value={h.name}
+                    onChange={(v) => patchRow({ name: v })}
+                    placeholder="Water intake"
+                  />
+                  <TextInput
+                    ariaLabel="Habit target"
+                    value={h.target}
+                    onChange={(v) => patchRow({ target: v })}
+                    placeholder="3–4 L"
+                  />
+                  <RemoveButton
+                    label={`Remove ${h.name || "this habit"}`}
+                    onClick={() => setHabits((rows) => rows.filter((r) => r.key !== h.key))}
+                  />
+                </div>
+              );
+            })}
+
+            <AddButton
+              onClick={() =>
+                setHabits((rows) => [...rows, { key: key(), name: "", target: "" }])
+              }
+            >
+              Add habit
+            </AddButton>
+
+            <div className="mt-1.5 grid grid-cols-2 gap-x-5 gap-y-2 border-t border-divider pt-3.5">
+              {HABIT_FOOTER_FIELDS.map((f) => (
+                <ProfileInput
+                  key={f.key}
+                  field={f}
+                  value={profile[f.key] ?? ""}
+                  onChange={(v) => setField(f.key, v)}
+                />
+              ))}
+              <span className="col-span-2 text-[11.5px] text-muted-2">
+                These two print in the footer strip at the foot of page 1, separately
+                from the habit rows above.
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {/* ------------------------------------------------- Recommended brands */}
+        <Card>
+          <CardHeader
+            title="Recommended brands"
+            meta={
+              <span className="text-[11.5px] text-muted-2">
+                What to buy, per food — printed on page 2
+              </span>
+            }
+          />
+          <div className="flex flex-col gap-2.5 p-4">
+            {foodBrands.length ? (
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] gap-2">
+                <span className="lbl">Food *</span>
+                <span className="lbl">Brand</span>
+                <span />
+              </div>
+            ) : null}
+
+            {foodBrands.map((b) => {
+              const patchRow = (p: Partial<BrandRow>) =>
+                setFoodBrands((rows) => rows.map((r) => (r.key === b.key ? { ...r, ...p } : r)));
+              return (
+                <div
+                  key={b.key}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] gap-2"
+                >
+                  <TextInput
+                    ariaLabel="Food"
+                    value={b.food}
+                    onChange={(v) => patchRow({ food: v })}
+                    placeholder="Bread"
+                  />
+                  <TextInput
+                    ariaLabel="Brand"
+                    value={b.brand}
+                    onChange={(v) => patchRow({ brand: v })}
+                    placeholder="Modern"
+                  />
+                  <RemoveButton
+                    label={`Remove ${b.food || "this brand"}`}
+                    onClick={() => setFoodBrands((rows) => rows.filter((r) => r.key !== b.key))}
+                  />
+                </div>
+              );
+            })}
+
+            <AddButton
+              onClick={() =>
+                setFoodBrands((rows) => [...rows, { key: key(), food: "", brand: "" }])
+              }
+            >
+              Add brand
+            </AddButton>
+          </div>
+        </Card>
+
         {/* --------------------------------------------------- Training split */}
         <Card>
           <CardHeader
@@ -328,6 +543,20 @@ export function PlanBuilder({
                 />
               </div>
             ))}
+
+            <div className="mt-1.5 grid grid-cols-3 gap-x-5 gap-y-2 border-t border-divider pt-3.5">
+              {TRAINING_FIELDS.map((f) => (
+                <ProfileInput
+                  key={f.key}
+                  field={f}
+                  value={profile[f.key] ?? ""}
+                  onChange={(v) => setField(f.key, v)}
+                />
+              ))}
+              <span className="col-span-3 text-[11.5px] text-muted-2">
+                Printed against every training day on the PDF, and in the footer strip.
+              </span>
+            </div>
 
             <div className="mt-1.5 flex flex-col gap-2 border-t border-divider pt-3.5">
               <span className="text-[12.5px] text-ink-2">Lyfta workout link</span>

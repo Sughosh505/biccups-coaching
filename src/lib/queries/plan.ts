@@ -5,6 +5,8 @@ import type {
   FullPlan,
   MealGroupWithFoods,
   Plan,
+  PlanFoodBrand,
+  PlanHabit,
   PlanMeal,
   PlanMealGroup,
   PlanNotes,
@@ -14,20 +16,30 @@ import type {
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-/** The four child tables in one pass — four queries per plan, never per group. */
+/** The six child tables in one pass — six queries per plan, never per group. */
 async function assemble(supabase: Supabase, plan: Plan): Promise<FullPlan> {
-  const [{ data: groups }, { data: foods }, { data: supplements }, { data: notes }] =
-    await Promise.all([
-      supabase
-        .from("plan_meal_groups")
-        .select("*")
-        .eq("plan_id", plan.id)
-        .order("sort_order")
-        .order("name"),
-      supabase.from("plan_meals").select("*").eq("plan_id", plan.id).order("sort_order"),
-      supabase.from("plan_supplements").select("*").eq("plan_id", plan.id).order("sort_order"),
-      supabase.from("plan_notes").select("*").eq("plan_id", plan.id).maybeSingle(),
-    ]);
+  const [
+    { data: groups },
+    { data: foods },
+    { data: supplements },
+    { data: habits },
+    { data: foodBrands },
+    { data: notes },
+  ] = await Promise.all([
+    supabase
+      .from("plan_meal_groups")
+      .select("*")
+      .eq("plan_id", plan.id)
+      .order("sort_order")
+      .order("name"),
+    supabase.from("plan_meals").select("*").eq("plan_id", plan.id).order("sort_order"),
+    supabase.from("plan_supplements").select("*").eq("plan_id", plan.id).order("sort_order"),
+    // Print-only (D-18), but fetched here rather than inside the document so both
+    // print routes get them from the one call they already make.
+    supabase.from("plan_habits").select("*").eq("plan_id", plan.id).order("sort_order"),
+    supabase.from("plan_food_brands").select("*").eq("plan_id", plan.id).order("sort_order"),
+    supabase.from("plan_notes").select("*").eq("plan_id", plan.id).maybeSingle(),
+  ]);
 
   const byGroup = new Map<string, PlanMeal[]>();
   for (const food of (foods ?? []) as PlanMeal[]) {
@@ -43,6 +55,8 @@ async function assemble(supabase: Supabase, plan: Plan): Promise<FullPlan> {
       foods: byGroup.get(g.id) ?? [],
     })),
     supplements: (supplements ?? []) as PlanSupplement[],
+    habits: (habits ?? []) as PlanHabit[],
+    foodBrands: (foodBrands ?? []) as PlanFoodBrand[],
     notes: (notes ?? null) as PlanNotes | null,
   };
 }
@@ -228,4 +242,62 @@ export async function getPublishedPlanForOwner(
 
   if (!plan) return null;
   return assemble(supabase, plan as Plan);
+}
+
+/**
+ * Blank-field defaults for the plan builder's profile card — DESIGN.md D-20.
+ *
+ * The document's profile is a snapshot on the plan, not a live join, so this only
+ * saves the coach retyping what the app already holds. It is read once to seed an
+ * empty field and never written back to `clients`.
+ *
+ * Two deliberate omissions:
+ *   - `goal_bf` does NOT seed `body_fat_pct`. One is the goal, the other is what
+ *     they are now; printing the first as the second on a document handed to a
+ *     client would be a lie the coach never typed.
+ *   - A consultation client returns nothing. Their numbers are inside
+ *     `form_responses`, keyed by the coach's own Google Form question text, which
+ *     is unstable by design (D-9) — guessing at it is how a wrong number reaches
+ *     a printed page. The coach types them once.
+ */
+export async function getPlanProfileDefaults(
+  ownerType: PlanOwnerType,
+  ownerId: string,
+): Promise<Record<string, string>> {
+  if (ownerType !== "coaching_client") return {};
+
+  const supabase = await createClient();
+  const [{ data: client }, { data: measurement }] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("age, gender, height, current_weight, start_weight, goal_weight")
+      .eq("id", ownerId)
+      .maybeSingle(),
+    supabase
+      .from("measurements")
+      .select("waist, chest")
+      .eq("client_id", ownerId)
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (!client) return {};
+
+  const out: Record<string, string> = {};
+  const put = (key: string, value: number | string | null | undefined) => {
+    if (value !== null && value !== undefined && value !== "") out[key] = String(value);
+  };
+
+  put("age", client.age);
+  put("gender", client.gender);
+  put("height_cm", client.height);
+  // Their weight today is the snapshot's starting point; start_weight is the
+  // fallback for a client who has not checked in yet.
+  put("weight_kg", client.current_weight ?? client.start_weight);
+  put("goal_weight_kg", client.goal_weight);
+  put("waist_cm", measurement?.waist);
+  put("chest_cm", measurement?.chest);
+
+  return out;
 }
