@@ -16,9 +16,12 @@
  * taken, prose in the calories column, bedtimes written as though the clock had
  * no afternoon, and dates pre-seeded weeks ahead sitting empty.
  *
- * Nothing is silently dropped. Anything that cannot be read is reported and the
- * run refuses to apply until it is either fixed in the sheet or accepted with
- * --skip-bad. An import that quietly loses a column is worse than no import.
+ * Nothing is silently dropped, and nothing is half-imported. A column the app has
+ * no field for is carried into the check-in's notes. A row with something actually
+ * wrong in it — a value that will not coerce, a number outside the range its own
+ * column header declares, a lone stray cell — is LEFT OUT and listed by date, for
+ * the coach to enter by hand. A handful of rows typed in beats a table of
+ * half-parsed ones nobody can trust.
  */
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
@@ -35,7 +38,6 @@ const has = (name) => args.includes(`--${name}`);
 const FILE = flag("file");
 const CLIENT = flag("client");
 const APPLY = has("apply");
-const SKIP_BAD = has("skip-bad");
 const OVERWRITE = has("overwrite");
 // Columns to leave out of notes. Everything not mapped to a field of its own is
 // carried into notes by default so no column of the sheet is lost; this is the
@@ -47,7 +49,7 @@ const IGNORE = (flag("ignore") ?? "")
 
 if (!FILE || !CLIENT) {
   console.error(
-    'usage: node scripts/import-checkins.mjs --file <csv> --client <name|uuid> [--apply] [--skip-bad] [--overwrite] [--ignore "Col,Col"]',
+    'usage: node scripts/import-checkins.mjs --file <csv> --client <name|uuid> [--apply] [--overwrite] [--ignore "Col,Col"]',
   );
   process.exit(2);
 }
@@ -290,6 +292,7 @@ const cell = (row, i) => (i === -1 ? "" : (row[i] ?? ""));
 
 const parsed = [];
 const problems = [];
+const omitted = [];
 const notes = [];
 let skippedEmpty = 0;
 
@@ -320,6 +323,11 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     continue;
   }
 
+  // Anything wrong with this row lands here. A row with a single fault is left out
+  // entirely rather than imported half-parsed — the coach enters those few by hand,
+  // which is faster and more trustworthy than reviewing a table of partial rows.
+  const rowProblems = [];
+
   const weight = num(cell(row, IDX.weight));
   const steps = num(cell(row, IDX.steps), { thousands: true });
   const calories = num(cell(row, IDX.calories));
@@ -332,21 +340,17 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   const digestion = yesNo(cell(row, IDX.digestion));
   const sleep = bedtime(cell(row, IDX.sleepTime));
 
-  // A cell that will not coerce is usually the client answering in words —
-  // "Didnt track sick" in CALORIES, "BLOATING" in DIGESTION. That is exactly what
-  // the coach wants to read, and the schema has somewhere to put it, so it is
-  // carried into notes rather than thrown away. Still reported: the number is gone.
-  const carried = [];
+  // A cell that will not coerce — "Didnt track sick" in CALORIES, "BLOATING" in
+  // DIGESTION — makes the whole row suspect, so the row is left out and listed for
+  // the coach. The alternative, importing it with that one field blank, produces a
+  // row that looks complete and quietly is not.
   for (const [label, got] of [
     ["weight", weight], ["steps", steps], ["calories", calories],
     ["sleep duration", sleepHrs], ["water", water], ["sleep quality", quality],
     ["hunger", hunger], ["stress", stress], ["supplements", supplements],
     ["digestion", digestion], ["sleep time", sleep],
   ]) {
-    if (got.bad !== null) {
-      problems.push(`${date}: ${label} — "${got.bad}" is not a number, kept as a note`);
-      carried.push(`${label}: ${got.bad}`);
-    }
+    if (got.bad !== null) rowProblems.push(`${label} reads "${got.bad}"`);
   }
   if (sleep.note) notes.push(`${date}: bedtime ${sleep.note}`);
 
@@ -359,9 +363,7 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     if (got.value === null) return null;
     const v = Math.round(got.value);
     if (v < 1 || v > 10) {
-      const raw = String(original ?? got.value).trim();
-      problems.push(`${date}: ${label} is "${raw}", outside the 1-10 the column allows — kept as a note`);
-      carried.push(`${label}: ${raw}`);
+      rowProblems.push(`${label} is "${String(original ?? got.value).trim()}", outside 1-10`);
       return null;
     }
     return v;
@@ -378,9 +380,8 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     weight.value, steps.value, calories.value, supplements.value, sleep.value,
     sleepHrs.value, quality.value, water.value, hunger.value, digestion.value, stress.value,
   ].filter((v) => v !== null && v !== undefined).length;
-  if (filled <= 1) {
-    notes.push(`${date}: only ${filled} value recorded — a stray cell? It will count as a check-in`);
-  }
+  // One lone value on a date is a mis-keyed cell, not a check-in somebody made.
+  if (filled <= 1) rowProblems.push(`only ${filled} value on the whole row`);
 
   const ownNote = isBlank(cell(row, IDX.notes)) ? null : String(cell(row, IDX.notes)).trim();
 
@@ -390,7 +391,7 @@ for (let r = headerAt + 1; r < rows.length; r++) {
     .filter(([, i]) => !isBlank(cell(row, i)))
     .map(([h, i]) => `${h}: ${String(cell(row, i)).trim()}`);
 
-  const noteParts = [ownNote, ...extras, ...carried].filter(Boolean);
+  const noteParts = [ownNote, ...extras].filter(Boolean);
 
   // daily_checkins_lyfta_link_https rejects anything else, so a non-https link is
   // kept as a note rather than failing the whole row.
@@ -399,8 +400,7 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   if (rawLyfta) {
     if (/^https:\/\/\S+$/.test(rawLyfta)) lyfta = rawLyfta;
     else {
-      problems.push(`${date}: workout link "${rawLyfta}" is not an https:// address, kept as a note`);
-      noteParts.push(`lyfta link: ${rawLyfta}`);
+      rowProblems.push(`workout link "${rawLyfta}" is not an https:// address`);
     }
   }
 
@@ -410,9 +410,13 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   if (rawDiet) {
     if (/^https:\/\/\S+$/.test(rawDiet)) dietPhoto = rawDiet;
     else {
-      problems.push(`${date}: food photo "${rawDiet}" is not an https:// address, kept as a note`);
-      noteParts.push(`diet photo: ${rawDiet}`);
+      rowProblems.push(`food photo "${rawDiet}" is not an https:// address`);
     }
+  }
+
+  if (rowProblems.length) {
+    omitted.push({ date, reasons: rowProblems });
+    continue;
   }
 
   parsed.push({
@@ -441,7 +445,9 @@ const match = clients?.find((c) => c.id === CLIENT || c.name?.toLowerCase() === 
 
 console.log(`file      ${FILE}`);
 console.log(`client    ${match ? `${match.name} (${match.id})` : `NOT FOUND — "${CLIENT}"`}`);
-console.log(`rows      ${parsed.length} to import, ${skippedEmpty} empty dates skipped\n`);
+console.log(
+  `rows      ${parsed.length} to import, ${omitted.length} left out, ${skippedEmpty} empty dates skipped\n`,
+);
 
 if (parsed.length) {
   const first = parsed[0];
@@ -465,8 +471,14 @@ if (notes.length) {
   console.log("");
 }
 
+if (omitted.length) {
+  console.log(`${omitted.length} ROW(S) LEFT OUT — enter these by hand once the rest is in:`);
+  for (const o of omitted) console.log(`  ${o.date}  (${o.reasons.join("; ")})`);
+  console.log("");
+}
+
 if (problems.length) {
-  console.log(`${problems.length} PROBLEM(S):`);
+  console.log(`${problems.length} PROBLEM(S) with the file itself:`);
   for (const p of problems) console.log(`  ${p}`);
   console.log("");
 }
@@ -492,12 +504,6 @@ if (match.start_date && parsed.length) {
 if (!APPLY) {
   console.log("DRY RUN — nothing written. Re-run with --apply once the above looks right.");
   process.exit(0);
-}
-
-if (problems.length && !SKIP_BAD) {
-  console.log("Refusing to apply while there are problems. Fix the sheet, or re-run with --skip-bad");
-  console.log("to accept them (the affected values are stored blank, never guessed).");
-  process.exit(1);
 }
 
 const { data: existing } = await admin
