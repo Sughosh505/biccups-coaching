@@ -55,6 +55,10 @@ export function ClientForm({
         <CardHeader title="Body" />
         <div className="grid grid-cols-3 gap-x-5 gap-y-4 p-4">
           <Field label="Age" name="age" type="number" defaultValue={client?.age} />
+          {/* Free text, not a select: the only consumer is a line of print on the
+              plan document, and a fixed list is a product decision this app has no
+              reason to make. */}
+          <Field label="Gender" name="gender" defaultValue={client?.gender ?? ""} />
           <Field
             label="Height"
             name="height"

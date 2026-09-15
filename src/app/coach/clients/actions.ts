@@ -27,6 +27,7 @@ function clientFields(form: FormData) {
     email: text(form, "email"),
     phone: text(form, "phone"),
     age: number(form, "age"),
+    gender: text(form, "gender"),
     height: number(form, "height"),
     start_weight: number(form, "start_weight"),
     current_weight: number(form, "current_weight"),

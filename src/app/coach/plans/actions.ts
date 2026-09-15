@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireCoach } from "@/lib/auth";
 import { report } from "@/lib/report";
-import { DAY_NAMES } from "@/lib/plan";
+import { ALL_PROFILE_FIELDS, DAY_NAMES } from "@/lib/plan";
 import type { PlanOwnerType } from "@/lib/types";
 
 function text(form: FormData, key: string): string | null {
@@ -68,6 +68,9 @@ type IncomingSupplement = {
   timing?: unknown;
 };
 
+type IncomingHabit = { name?: unknown; target?: unknown };
+type IncomingFoodBrand = { food?: unknown; brand?: unknown };
+
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
 /**
@@ -96,6 +99,45 @@ const num = (v: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+/** Whole numbers only — an age of 16.5 is a typo, not a measurement. */
+const int = (v: unknown): number | null => {
+  const parsed = num(v);
+  return parsed === null ? null : Math.round(parsed);
+};
+
+/**
+ * The document's profile snapshot, walked from the one field list in lib/plan.ts
+ * so a new column cannot be added to the builder and forgotten here.
+ *
+ * Over-long and out-of-range values are collected rather than clamped. The
+ * database would refuse them anyway (the CHECKs in 20260915030000), but a
+ * constraint violation reaches the coach as "Saving the plan failed" — which says
+ * nothing about which of twenty-one fields was wrong.
+ */
+function profileOf(raw: unknown) {
+  const input = (raw ?? {}) as Record<string, unknown>;
+  const profile: Record<string, string | number | null> = {};
+  const tooLong: string[] = [];
+  const outOfRange: string[] = [];
+
+  for (const field of ALL_PROFILE_FIELDS) {
+    if (field.kind === "text") {
+      const value = str(input[field.key]);
+      if (field.max && value.length > field.max) tooLong.push(field.label);
+      profile[field.key] = value || null;
+      continue;
+    }
+
+    const value = field.kind === "int" ? int(input[field.key]) : num(input[field.key]);
+    if (value !== null && field.range && (value < field.range[0] || value > field.range[1])) {
+      outOfRange.push(field.label);
+    }
+    profile[field.key] = value;
+  }
+
+  return { profile, tooLong, outOfRange };
+}
+
 /**
  * The builder posts the whole plan as JSON. Everything is re-derived here rather
  * than trusted: a server action is a public HTTP endpoint, so the shape that
@@ -108,6 +150,10 @@ function normalise(raw: unknown) {
     ? (input.supplements as IncomingSupplement[])
     : [];
   const rawSplit = Array.isArray(input.split_days) ? (input.split_days as unknown[]) : [];
+  const rawHabits = Array.isArray(input.habits) ? (input.habits as IncomingHabit[]) : [];
+  const rawBrands = Array.isArray(input.food_brands)
+    ? (input.food_brands as IncomingFoodBrand[])
+    : [];
 
   const groups = rawGroups
     .map((g) => ({
@@ -131,19 +177,35 @@ function normalise(raw: unknown) {
     }))
     .filter((s) => s.name !== "");
 
+  // Same rule as supplements: the first column is the row's identity, so a row
+  // without one is a blank the coach left behind rather than data.
+  const habits = rawHabits
+    .map((h) => ({ name: str(h.name), target: str(h.target) || null }))
+    .filter((h) => h.name !== "");
+
+  const foodBrands = rawBrands
+    .map((b) => ({ food: str(b.food), brand: str(b.brand) || null }))
+    .filter((b) => b.food !== "");
+
   const splitDays = DAY_NAMES.map((_, i) => str(rawSplit[i]));
   const lyfta = httpsUrl(input.lyfta_link);
+  const { profile, tooLong, outOfRange } = profileOf(input.profile);
 
   return {
     payload: {
       title: str(input.title) || null,
       groups,
       supplements,
+      habits,
+      food_brands: foodBrands,
       split_days: splitDays.some(Boolean) ? splitDays : null,
       general_notes: str(input.general_notes) || null,
       lyfta_link: lyfta.url,
+      profile,
     },
     badLink: lyfta.invalid,
+    tooLong,
+    outOfRange,
   };
 }
 
@@ -165,6 +227,18 @@ export async function savePlan(planId: string, form: FormData) {
   // the plan save cleanly will assume the client got it.
   if (normalised!.badLink) {
     fail("The Lyfta link must be a full https:// address. Nothing was saved.");
+  }
+
+  // Named rather than clamped, for the same reason: a value silently shortened to
+  // fit the PDF is one the coach never proof-reads again.
+  if (normalised!.tooLong.length) {
+    fail(
+      `Too long to fit the PDF: ${normalised!.tooLong.join(", ")}. Nothing was saved.`,
+    );
+  }
+
+  if (normalised!.outOfRange.length) {
+    fail(`Out of range: ${normalised!.outOfRange.join(", ")}. Nothing was saved.`);
   }
 
   const { error } = await supabase.rpc("save_plan", {

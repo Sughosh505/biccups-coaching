@@ -38,6 +38,8 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Print only — the §4 Plan document's masthead and section bars. */
+  --font-display: var(--font-display);
 }
 
 body {
@@ -149,5 +151,242 @@ body {
   .sec,
   .lbl {
     break-after: avoid;
+  }
+}
+
+/* ---------------------------------------------------------- Plan document
+   DESIGN.md §4 "Plan document (print)" and decisions D-18 / D-19.
+
+   A branded two-page A4 document, not the screen on paper. It is what a
+   consultation client actually receives — they have no account at all (D-14) —
+   so it is designed as a letterhead rather than inheriting the app's layout.
+
+   It does NOT use the §1 tokens (D-19). The print sheet above re-points a dark
+   ramp onto a light GREY ramp; this is pure black on white with fully inverted
+   bars, which a grey ramp cannot express, and forcing the tokens to black and
+   white would wreck that sheet for every other screen. Because the document never
+   uses a token utility class, the two cannot collide.
+
+   Hidden on screen here rather than with a `hidden` class, so that the whole
+   document — visibility included — is described in one place. */
+.pdoc {
+  display: none;
+}
+
+@media print {
+  /* size: A4 stops a Letter-default printer reflowing the layout. 12mm margins
+     leave a content box of exactly 186 × 273mm, which is what .pdoc-page is. */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  .pdoc {
+    display: block;
+    background: #fff;
+    color: #000;
+    font-family: var(--font-sans);
+    line-height: 1.25;
+  }
+
+  /* Restated inside .pdoc rather than relying on the global rule above: without
+     it the black bars print as white boxes and the document is destroyed. */
+  .pdoc *,
+  .pdoc *::before,
+  .pdoc *::after {
+    box-sizing: border-box;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* A FIXED height, not a minimum: it is what lets .pdoc-pagefoot use
+     margin-top:auto to pin itself to the foot of the sheet. The cost is that an
+     over-long plan grows onto a third page — deliberately, since there is no
+     overflow:hidden. Silently truncating a client's meals is worse than a
+     visibly wrong PDF; the guards are the char_length CHECKs on the columns and
+     the row budget in DESIGN.md §4. */
+  .pdoc-page {
+    width: 186mm;
+    height: 273mm;
+    display: flex;
+    flex-direction: column;
+    gap: 3mm;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  /* Chrome drops a trailing break; Firefox and Safari emit a blank third page. */
+  .pdoc-page:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* ---- Masthead and bars ---- */
+  .pdoc-mast {
+    background: #000;
+    color: #fff;
+    padding: 6mm 5mm;
+  }
+
+  .pdoc-display {
+    font-family: var(--font-display), var(--font-sans);
+  }
+
+  .pdoc-bar {
+    background: #000;
+    color: #fff;
+    padding: 1.8mm 2.5mm;
+  }
+
+  .pdoc-card {
+    border: 0.35mm solid #000;
+    break-inside: avoid;
+  }
+
+  .pdoc-cardtitle {
+    background: #000;
+    color: #fff;
+    padding: 1.6mm 2.5mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* ---- Leader row: label · dotted filler · value ----
+     height:0 with align-self:center puts the dots on the row's optical centre.
+     A border-bottom on the label itself would sit on its baseline instead. */
+  .pdoc-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2mm;
+  }
+
+  .pdoc-lead {
+    flex: 1 1 auto;
+    min-width: 6mm;
+    align-self: center;
+    height: 0;
+    border-bottom: 0.3mm dotted #767676;
+  }
+
+  /* ---- Tick circles: no fill, so they survive a dropped background.
+     3.4mm is comfortable for a pen. ---- */
+  .pdoc-ticks {
+    display: flex;
+    gap: 1.8mm;
+  }
+
+  .pdoc-tick {
+    display: inline-block;
+    width: 3.4mm;
+    height: 3.4mm;
+    border: 0.3mm solid #000;
+    border-radius: 50%;
+  }
+
+  /* ---- Write-in rules: fainter than a leader, because a pen goes on top ---- */
+  .pdoc-write {
+    display: block;
+    height: 3mm;
+    border-bottom: 0.3mm dotted #b0b0b0;
+  }
+
+  .pdoc-rule {
+    height: 6.5mm;
+    border-bottom: 0.3mm dotted #b0b0b0;
+  }
+
+  /* ---- Tables. table-layout:fixed with an explicit colgroup per table: a
+     document cannot have content-driven column widths. ---- */
+  .pdoc-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .pdoc-table th {
+    text-align: left;
+    padding: 1.4mm 2.5mm;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-bottom: 0.3mm solid #000;
+  }
+
+  .pdoc-table td {
+    padding: 1.4mm 2.5mm;
+    font-size: 7.5pt;
+    border-bottom: 0.2mm solid #d6d6d6;
+    vertical-align: middle;
+  }
+
+  .pdoc-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .pdoc-num {
+    text-align: right;
+  }
+
+  /* The DAILY TOTAL row on page 2. */
+  .pdoc-invert td {
+    background: #000;
+    color: #fff;
+    font-weight: 700;
+    border-bottom: 0;
+  }
+
+  /* Rest days and every em-dash placeholder. */
+  .pdoc-rest {
+    color: #8a8a8a;
+  }
+
+  .pdoc-caption {
+    color: #555;
+    font-style: italic;
+  }
+
+  /* ---- The page-1 footer strip ---- */
+  .pdoc-strip {
+    display: flex;
+    border: 0.35mm solid #000;
+  }
+
+  .pdoc-strip > div {
+    flex: 1;
+    padding: 1.6mm 2.5mm;
+    border-right: 0.2mm solid #000;
+    font-size: 6.5pt;
+    letter-spacing: 0.08em;
+  }
+
+  .pdoc-strip > div:last-child {
+    border-right: 0;
+  }
+
+  /* margin-top:auto against .pdoc-page's fixed height pins this to the foot. */
+  .pdoc-pagefoot {
+    margin-top: auto;
+    background: #000;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    padding: 1.6mm 2.5mm;
+    font-size: 6.5pt;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+  }
+}
+
+@media print {
+  /* Equal halves of a two-card row. Declared once here rather than inline on each
+     card, because `flex:1 1 0` without `min-width:0` lets a long table push its
+     column wider than its half. */
+  .pdoc-col {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }

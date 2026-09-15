@@ -276,10 +276,22 @@ async function seedPlan({ ownerType, ownerId, title, published }) {
   await admin
     .from("plan_supplements")
     .insert({ plan_id: plan.id, name: "Creatine", dose: "5 g", timing: "Breakfast", sort_order: 0 });
+  await admin
+    .from("plan_habits")
+    .insert({ plan_id: plan.id, name: "Water intake", target: "3-4 L", sort_order: 0 });
+  await admin
+    .from("plan_food_brands")
+    .insert({ plan_id: plan.id, food: "Bread", brand: "Modern", sort_order: 0 });
   await admin.from("plan_notes").insert({
     plan_id: plan.id,
     split_days: ["Upper", "Lower", "Rest", "Upper", "Lower", "Upper", "Rest"],
     general_notes: `verify ${planStamp}`,
+    // The document's profile snapshot. This is health data about a named person
+    // riding on a table that used to carry only split labels, so the checks below
+    // prove it is no more readable than the rest of the plan.
+    height_cm: 174,
+    weight_kg: 75,
+    conditions: `verify ${planStamp} — lactose intolerant`,
   });
 
   return plan.id;
@@ -312,7 +324,14 @@ check(
 );
 
 async function planChildCounts(client, planId) {
-  const tables = ["plan_meal_groups", "plan_meals", "plan_supplements", "plan_notes"];
+  const tables = [
+    "plan_meal_groups",
+    "plan_meals",
+    "plan_supplements",
+    "plan_habits",
+    "plan_food_brands",
+    "plan_notes",
+  ];
   const counts = {};
   for (const table of tables) {
     const { data } = await client.from(table).select("id").eq("plan_id", planId);
@@ -868,6 +887,77 @@ check(
   acceptedSession.length ? `accepted ${acceptedSession.join(", ")}` : goodSession?.message,
 );
 
+// --- the plan document's two new child tables --------------------------------
+// Checks 23-25 already walk these through planChildCounts(). These four are the
+// ones worth stating separately: a signed-out read, a write attempt, and the
+// health data that moved onto plan_notes with the profile snapshot.
+const docTables = ["plan_habits", "plan_food_brands"];
+
+const crossDoc = {};
+for (const table of docTables) {
+  const { data } = await asClient.from(table).select("id").eq("plan_id", theirPlanId);
+  crossDoc[table] = data?.length ?? 0;
+}
+check(
+  "57. client CANNOT read another client's habits or recommended brands",
+  Object.values(crossDoc).every((n) => n === 0),
+  JSON.stringify(crossDoc),
+);
+
+const anonDoc = {};
+for (const table of docTables) {
+  const { data } = await signedOut.from(table).select("id");
+  anonDoc[table] = data?.length ?? 0;
+}
+check(
+  "58. signed out sees no habits and no recommended brands at all",
+  Object.values(anonDoc).every((n) => n === 0),
+  JSON.stringify(anonDoc),
+);
+
+// Their own plan is published, so they can READ it — the question is whether the
+// read-only rule holds for writes. An RLS write that matches no row returns no
+// error, so every one is re-read with admin rather than trusted.
+await asClient.from("plan_habits").insert({ plan_id: myPlanId, name: "Injected", sort_order: 9 });
+await asClient.from("plan_habits").update({ target: "hijacked" }).eq("plan_id", myPlanId);
+await asClient
+  .from("plan_food_brands")
+  .insert({ plan_id: myPlanId, food: "Injected", sort_order: 9 });
+
+const { data: injectedHabit } = await admin
+  .from("plan_habits")
+  .select("id")
+  .eq("plan_id", myPlanId)
+  .eq("name", "Injected");
+const { data: injectedBrand } = await admin
+  .from("plan_food_brands")
+  .select("id")
+  .eq("plan_id", myPlanId)
+  .eq("food", "Injected");
+const { data: habitAfter } = await admin
+  .from("plan_habits")
+  .select("target")
+  .eq("plan_id", myPlanId)
+  .eq("name", "Water intake")
+  .maybeSingle();
+check(
+  "59. client CANNOT write habits or brands on their own plan (coach writes)",
+  (injectedHabit?.length ?? 0) === 0 &&
+    (injectedBrand?.length ?? 0) === 0 &&
+    habitAfter?.target === "3-4 L",
+  `habit ${injectedHabit?.length ?? 0}, brand ${injectedBrand?.length ?? 0}, target ${habitAfter?.target}`,
+);
+
+const { data: leakedProfile } = await asClient
+  .from("plan_notes")
+  .select("height_cm, weight_kg, conditions")
+  .eq("plan_id", theirPlanId);
+check(
+  "60. client CANNOT read another client's profile snapshot (health data)",
+  (leakedProfile ?? []).length === 0,
+  `sees ${(leakedProfile ?? []).length} row(s)`,
+);
+
 // --- cleanup: unlink before deleting, per the FK ------------------------------
 // Probe rows and objects go first: a leftover 2099 row collides with the unique
 // constraint on the next run and turns test 16 into a false failure.
@@ -890,7 +980,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "57. cleanup restored the client row to how it was found",
+  "61. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );

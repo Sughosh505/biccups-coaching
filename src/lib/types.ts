@@ -19,6 +19,8 @@ export type Client = {
   email: string | null;
   phone: string | null;
   age: number | null;
+  /** Free text. Only consumer is the printed plan document's client bar. */
+  gender: string | null;
   start_weight: number | null;
   current_weight: number | null;
   goal_weight: number | null;
@@ -222,6 +224,62 @@ export type PlanNotes = {
    * Always https — enforced in the server action and by a check constraint.
    */
   lyfta_link: string | null;
+
+  /* ---- The printed document's profile snapshot — DESIGN.md D-20 ----------
+   * A snapshot, not a join: consultation clients have no metric columns at all,
+   * and a plan already sent must keep reading as it did when it was sent.
+   * Every one is nullable; the document prints a blank leader for a null. */
+  gender: string | null;
+  age: number | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  goal_weight_kg: number | null;
+  /** What they are NOW, estimated from photos. Never Client.goal_bf (D-20). */
+  body_fat_pct: number | null;
+  bmr: number | null;
+  calorie_deficit: number | null;
+  /** Free text: it is a range in practice, "2250–2300". */
+  calorie_intake: string | null;
+  cardio_target: string | null;
+  /** The small caption beside the cardio target, "300–450 cals". */
+  cardio_note: string | null;
+  time_period: string | null;
+  /** The small caption beside the time period, "slow recomp". */
+  time_period_note: string | null;
+  conditions: string | null;
+
+  /* ---- Plan-level training prescription — DESIGN.md D-21 ---------------- */
+  /** Printed on every training day AND in the page-1 footer strip. */
+  rep_range: string | null;
+  intensity: string | null;
+  warm_up: string | null;
+  /** Footer strip only. Duplicates a habit row on purpose — see D-21. */
+  sleep_target: string | null;
+  water_target: string | null;
+
+  /* ---- Progress tracker baselines. cm, like every measurement here. ----- */
+  waist_cm: number | null;
+  chest_cm: number | null;
+};
+
+/** One row of the printed document's DAILY HABITS card. The seven weekday ticks
+ *  are not stored — they print empty for the client to fill in (D-18). */
+export type PlanHabit = {
+  id: string;
+  plan_id: string;
+  name: string;
+  target: string | null;
+  sort_order: number;
+};
+
+/** One row of the printed document's RECOMMENDED BRANDS card. Not a column on
+ *  PlanMeal: a brand is for a food the client buys, not for one meal's portion. */
+export type PlanFoodBrand = {
+  id: string;
+  plan_id: string;
+  food: string;
+  brand: string | null;
+  sort_order: number;
 };
 
 export type MealGroupWithFoods = PlanMealGroup & { foods: PlanMeal[] };
@@ -230,5 +288,8 @@ export type FullPlan = {
   plan: Plan;
   groups: MealGroupWithFoods[];
   supplements: PlanSupplement[];
+  /** Print-only (D-18). PlanView never reads these two. */
+  habits: PlanHabit[];
+  foodBrands: PlanFoodBrand[];
   notes: PlanNotes | null;
 };

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCoach } from "@/lib/auth";
-import { getPlan, getPlanOwner } from "@/lib/queries/plan";
+import { getPlan, getPlanOwner, getPlanProfileDefaults } from "@/lib/queries/plan";
 import {
   deletePlan,
   publishPlan,
@@ -32,7 +32,10 @@ export default async function PlanBuilderPage({
   const full = await getPlan(id);
   if (!full) notFound();
 
-  const owner = await getPlanOwner(full.plan.owner_type, full.plan.owner_id);
+  const [owner, profileDefaults] = await Promise.all([
+    getPlanOwner(full.plan.owner_type, full.plan.owner_id),
+    getPlanProfileDefaults(full.plan.owner_type, full.plan.owner_id),
+  ]);
   const published = Boolean(full.plan.published_at);
   const notice = Object.keys(NOTICES).find((k) => query[k]);
 
@@ -109,6 +112,7 @@ export default async function PlanBuilderPage({
       <PlanBuilder
         {...full}
         ownerName={owner.name}
+        profileDefaults={profileDefaults}
         action={savePlan.bind(null, id)}
       />
 
