@@ -138,6 +138,13 @@ Verified clean: RLS blocks all anonymous reads and writes on all 12 tables, RLS 
 table, every table has at least one policy, all three `SECURITY DEFINER` helpers pin `search_path`, the
 service-role key appears nowhere in the build output, and a client cannot escalate their own role to coach.
 
+Since Phase 4 it also proves the plan boundary, which has two halves: a client cannot read another
+client's plan or any of its meals, supplements or notes, **and** nobody but the coach can read a plan that
+has not been published — including the client who owns it. Reading a published plan does not imply
+writing one: a client cannot retitle their own plan or insert a meal group into it. A consultation client,
+provisioned for the duration of the run, sees exactly one plan and nothing else at all — no clients, no
+check-ins, no measurements, no photos — and can reach `/plan` but neither `/client` nor `/coach`.
+
 Since Phase 3 the gate also proves the check-in write boundary: a client cannot insert, update, reassign
 or delete another client's check-in, one-per-day is enforced by the database rather than the UI, and the
 `daily-photos` bucket is private, carries owner-scoped policies, is not listable anonymously and serves
@@ -162,7 +169,13 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
 - **No rate limiting on the login form** beyond Supabase's built-in auth limits.
 - **`TIMEZONE` is hardcoded** to `Asia/Kolkata` in `src/lib/metrics.ts`. Correct today; wrong the moment
   you coach someone in another timezone, at which point it belongs on the client record.
-- **No audit trail.** Nothing records who changed a client's plan or weight, or when.
+- **No audit trail.** Nothing records who changed a client's plan or weight, or when. Phase 4 made this
+  slightly more visible: `plans.updated_at` moves on every save, but it records *when*, not *who* or
+  *what changed*, and a published plan is edited in place under the client with no version history.
+- **The coach's name is not shown on client screens.** `profiles` is readable only by its owner and the
+  coach, so a client session cannot resolve the coach's display name; the plan view says "Notes from your
+  coach" instead. Widening a policy to expose one string was not worth the boundary; revisit only if the
+  byline matters.
 
 ---
 
@@ -178,8 +191,10 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   `crypto.timingSafeEqual`, reject oversized bodies, rate-limit it, and treat the Google Form payload as
   untrusted input.
 - **Phase 6 — consultation client logins** must use the same `requireCoach()` assertion as
-  `createClientLogin`, and `verify-rls.mjs` must be extended to prove a consultation client can reach
-  *only* their own plan.
+  `createClientLogin`. ~~`verify-rls.mjs` must be extended to prove a consultation client can reach *only*
+  their own plan~~ — **done in Phase 4**, tests 27, 28 and 31: the script provisions a real consultation
+  account, asserts it reads one plan and no coaching data, and deletes it again. Phase 6 only has to add
+  the coach-side provisioning UI; the boundary it relies on is already proven.
 - **Any new API route** starts with zero authentication. Add an explicit role check as its first line.
 - **Any new Server Action touching `createAdminClient()`** must call `requireCoach()` first. This is the
   easiest serious mistake to make in this codebase.

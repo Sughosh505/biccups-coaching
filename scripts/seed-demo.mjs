@@ -121,6 +121,16 @@ async function clean() {
     return;
   }
 
+  const { data: consults } = await supabase
+    .from("consultation_clients")
+    .select("id")
+    .like("name", `${PREFIX}%`);
+
+  // plan_* rows cascade from plans, so deleting the plan is enough
+  await supabase
+    .from("plans")
+    .delete()
+    .in("owner_id", [...ids, ...(consults ?? []).map((c) => c.id)]);
   await supabase.from("daily_checkins").delete().in("client_id", ids);
   await supabase.from("measurements").delete().in("client_id", ids);
   await supabase.from("packages").delete().in("client_id", ids);
@@ -227,7 +237,104 @@ async function seed() {
     },
   ]);
 
-  console.log("Seeded packages and consultations.");
+  await seedPlan();
+
+  console.log("Seeded packages, consultations and a plan.");
+}
+
+/**
+ * Vivaan's diet sheet, transcribed in docs/frontend/02-spreadsheet-audit.md —
+ * macros on the meal group, foods listed without numbers (DESIGN.md D-1).
+ * Published, so the client screens show a real plan rather than an empty state.
+ */
+const PLAN_MEALS = [
+  {
+    name: "Breakfast",
+    calories: 667, protein: 29.8, carbs: 96.2, fat: 17.6,
+    foods: ["Black coffee", "Bread × 4", "Hershey's 38 g", "Banana 100 g", "Egg × 3"],
+  },
+  {
+    name: "Lunch",
+    calories: 833, protein: 58.6, carbs: 126, fat: 7.1,
+    foods: ["Cooked rice 400 g", "Chicken 150 g", "Veggies 100 g"],
+  },
+  {
+    name: "Pre-workout",
+    calories: 404, protein: 5.8, carbs: 90.7, fat: 8,
+    foods: ["Pori urundai", "Banana 100 g", "Lemon juice", "Tender coconut"],
+  },
+  {
+    name: "Dinner",
+    calories: 638, protein: 53.7, carbs: 85.5, fat: 6.3,
+    foods: ["Rice 300 g", "Chicken 150 g"],
+  },
+];
+
+const PLAN_SUPPLEMENTS = [
+  { name: "Fish oil", brand: "Youwefit", dose: "2 gels", timing: "With breakfast" },
+  { name: "Multivitamin", brand: "Trexgenics", dose: "1 tab", timing: "With breakfast" },
+  { name: "Vitamin D", brand: "D Rise", dose: "1 gel", timing: "With breakfast" },
+  { name: "Creatine", brand: "Wellcore", dose: "5 g", timing: "With breakfast" },
+  { name: "Alpha GPC", brand: "Pure Nutrition", dose: "2 tabs", timing: "30 min before workout" },
+  { name: "Magnesium", brand: "HK Vitals", dose: "2 tabs", timing: "1 hr before sleep" },
+];
+
+async function seedPlan() {
+  const clientId = await idFor("Vivaan Menon");
+  if (!clientId) return;
+
+  const { data: plan, error } = await supabase
+    .from("plans")
+    .insert({
+      owner_type: "coaching_client",
+      owner_id: clientId,
+      title: "Cut phase",
+      published_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.log(`Plan seed skipped: ${error.message}`);
+    return;
+  }
+
+  for (const [i, meal] of PLAN_MEALS.entries()) {
+    const { data: group } = await supabase
+      .from("plan_meal_groups")
+      .insert({
+        plan_id: plan.id,
+        name: meal.name,
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
+        sort_order: i,
+      })
+      .select("id")
+      .single();
+
+    await supabase.from("plan_meals").insert(
+      meal.foods.map((food, j) => ({
+        plan_id: plan.id,
+        group_id: group.id,
+        food_name: food,
+        sort_order: j,
+      })),
+    );
+  }
+
+  await supabase.from("plan_supplements").insert(
+    PLAN_SUPPLEMENTS.map((s, i) => ({ plan_id: plan.id, ...s, sort_order: i })),
+  );
+
+  await supabase.from("plan_notes").insert({
+    plan_id: plan.id,
+    split_days: ["Upper", "Lower", "Rest", "Upper", "Lower", "Upper", "Rest"],
+    lyfta_link: "https://lyfta.app/p/demo-upper-lower",
+    general_notes:
+      "Cut runs until 75 kg, then we reassess. Keep steps above 8,000 on rest days — that is doing more work than you think. Log the food photo even on the days you go off plan; I would rather see it than guess.",
+  });
 }
 
 async function idFor(name) {
