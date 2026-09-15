@@ -35,6 +35,8 @@ const NOTICES: Record<string, string> = {
   consulted: "Marked as consulted.",
   note: "Note saved.",
   "plan-sent": "Marked as sent.",
+  added: "Consultation added.",
+  saved: "Consultation updated.",
 };
 
 function longDate(iso: string): string {
@@ -112,10 +114,20 @@ export default async function ConsultationReviewPage({
               <span className="text-[12.5px] text-muted">
                 Consultation form submitted {dateAndTime(consultation.created_at)}
               </span>
+              {/* A null form_response_id means no webhook delivered this row. Worth
+                  saying, because the record is editable: without it nothing on the
+                  screen separates what they submitted from what was typed here. */}
+              <span className="text-[11.5px] text-muted-2">
+                {consultation.form_response_id ? "From the consultation form" : "Added by hand"}
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5">
+            <ButtonLink href={`/coach/consultations/${consultation.id}/edit`} variant="secondary">
+              Edit
+            </ButtonLink>
+
             {consultation.status === "new" ? (
               <form action={markConsulted.bind(null, consultation.id)}>
                 <Button type="submit" variant="secondary">
