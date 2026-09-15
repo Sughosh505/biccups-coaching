@@ -40,8 +40,10 @@ export default async function PlanPreviewPage({ params }: { params: Promise<{ id
   const owner = await getPlanOwner(full.plan.owner_type, full.plan.owner_id);
   const published = Boolean(full.plan.published_at);
 
+  // print:p-0 on the wrapper — on paper the page margin is @page's 14mm and nothing
+  // else; the screen gutter would stack on top of it.
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-[18px] px-[30px] py-[26px] print:p-0">
       <div className="flex items-start justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-2">
           <Link

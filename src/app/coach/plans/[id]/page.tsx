@@ -37,7 +37,7 @@ export default async function PlanBuilderPage({
   const notice = Object.keys(NOTICES).find((k) => query[k]);
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-[18px] px-[30px] py-[26px]">
       <div className="flex flex-col gap-2">
         <Link
           href="/coach/plans"
