@@ -44,14 +44,18 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await timed("  proxy auth.getUser", () => supabase.auth.getUser());
+  // Verified against the project's ES256 JWKS, not taken on trust from the
+  // cookie, and still refreshed when expired — see the note on getActor in
+  // src/lib/auth.ts. This runs on every request the matcher covers, so the
+  // round trip getUser() used to make here was the single most repeated call
+  // in the app.
+  const { data: claims } = await timed("  proxy getClaims", () => supabase.auth.getClaims());
+  const userId = claims?.claims?.sub ?? null;
 
   const { pathname } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
 
-  if (!user) {
+  if (!userId) {
     if (isPublicPath) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -60,7 +64,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   const { data: profile } = await timed("  proxy profiles.single", () =>
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("profiles").select("role").eq("id", userId).single(),
   );
 
   const role = profile?.role as string | undefined;

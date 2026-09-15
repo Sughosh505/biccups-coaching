@@ -84,8 +84,16 @@ Ordered. Don't skip the verification at the end.
 9. [ ] **Require current password when updating** → on. Stops someone with a live session on an unlocked
        phone silently locking the real owner out.
 10. [ ] **Site URL and Redirect URLs** → your real domain, not `localhost`.
-11. [ ] **Advisors → Security** → clear everything it flags.
-12. [ ] Check the backup story. Free tier is daily backups, short retention. Real client health data
+11. [ ] **Use an asymmetric JWT signing key** (ECC / ES256). Authentication → JWT Keys. The app
+        verifies sessions locally against the published JWKS (`getClaims()`), which only works with an
+        asymmetric key — on a legacy shared-secret project it silently falls back to a network
+        `getUser()` call on every request and every screen gets ~190ms slower. Confirm afterwards:
+        `curl -s <project-url>/auth/v1/.well-known/jwks.json` must return a key with `"alg":"ES256"`.
+12. [ ] **Shorten the access-token TTL** to 30 minutes or less. Authentication → Sessions. Local
+        verification means a signed-out or deleted user keeps access until their token expires, so the
+        TTL *is* the revocation window (§5).
+13. [ ] **Advisors → Security** → clear everything it flags.
+14. [ ] Check the backup story. Free tier is daily backups, short retention. Real client health data
         probably warrants Point-in-Time Recovery.
 
 ### C. Your Supabase account
@@ -177,6 +185,17 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
 
 ## 5. Known gaps, deliberately deferred
 
+- **Sessions are verified locally, so sign-out is not instant.** `src/lib/auth.ts` and the proxy
+  verify the access token with `getClaims()` against the project's ES256 JWKS instead of asking the
+  Auth server with `getUser()`. That is a real signature check, not the unverified `getSession()`,
+  and it falls back to `getUser()` by itself if a token ever arrives symmetrically signed — but a
+  token stays usable until it expires even if that user signed out on another device or you deleted
+  them. The window is the access-token TTL (1 hour by default; **set it to 30 minutes or less in the
+  production project** — §2B). The database was always in this position regardless, since PostgREST
+  validates the same JWT until it expires, so this aligns the app with the boundary Postgres already
+  enforced. Why it is worth it: `getUser()` cost a ~190ms round trip and ran up to six times per page
+  load; local verification is ~1ms. If you ever need instant revocation, the fix is short-lived
+  tokens, not a return to `getUser()` on every render.
 - **CSP still allows `script-src 'unsafe-inline'`.** Next.js inlines its hydration payload, so tightening
   it needs nonces threaded through the app. A half-applied CSP that breaks production is worse than a
   moderate one.

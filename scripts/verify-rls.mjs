@@ -454,6 +454,55 @@ check(
   `client ${goneRoute.status}, anonymous ${goneAnon.status}`,
 );
 
+// --- the session cookie is verified, not believed --------------------------
+//
+// The app verifies access tokens locally against the project JWKS rather than
+// asking the Auth server on every request (src/lib/auth.ts). That is only safe
+// while the signature is genuinely checked, so forge one and prove it bounces:
+// a cookie whose payload claims the coach's user id, with the original
+// client's signature left on it. If local verification were ever swapped for
+// getSession(), this cookie would walk straight into /coach.
+const { data: coachProfile } = await admin
+  .from("profiles")
+  .select("id")
+  .eq("role", "coach")
+  .limit(1)
+  .maybeSingle();
+
+if (coachProfile) {
+  const [h, p, sig] = session.session.access_token.split(".");
+  const claims = JSON.parse(Buffer.from(p, "base64url").toString());
+  claims.sub = coachProfile.id;
+  const forgedPayload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+  const forged = cookieFor({
+    ...session.session,
+    access_token: `${h}.${forgedPayload}.${sig}`,
+  });
+
+  const forgedCoach = await fetch(`${BASE}/coach`, {
+    headers: { cookie: forged },
+    redirect: "manual",
+  });
+  check(
+    "32. a cookie re-pointed at the coach's user id is rejected",
+    forgedCoach.status !== 200,
+    `status ${forgedCoach.status}`,
+  );
+
+  // Belt and braces: the database must refuse it too, independently of the app.
+  const forgedDb = await fetch(`${URL_}/rest/v1/clients?select=id&limit=1`, {
+    headers: {
+      apikey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${h}.${forgedPayload}.${sig}`,
+    },
+  });
+  check(
+    "33. PostgREST also refuses the forged token",
+    forgedDb.status === 401 || forgedDb.status === 403,
+    `status ${forgedDb.status}`,
+  );
+}
+
 
 // The plan Lyfta link is rendered as an href the client taps. The server action
 // refuses anything but https; this proves the database refuses it too, so the
@@ -469,7 +518,7 @@ const { error: goodLink } = await admin
   .update({ lyfta_link: "https://lyfta.app/p/abc123" })
   .eq("plan_id", myPlanId);
 check(
-  "32. database refuses a non-https Lyfta link, even from the service role",
+  "34. database refuses a non-https Lyfta link, even from the service role",
   accepted.length === 0 && !goodLink,
   accepted.length ? `accepted ${accepted.join(", ")}` : goodLink?.message,
 );
@@ -515,7 +564,7 @@ async function intakeRows() {
 
 const noSecretStatus = await intakePost({}, intakeBody(`verify-nosecret-${intakeStamp}`));
 check(
-  "33. webhook rejects a POST with no secret header, and writes nothing",
+  "35. webhook rejects a POST with no secret header, and writes nothing",
   noSecretStatus === 401 && (await intakeRows()).length === 0,
   `status ${noSecretStatus}`,
 );
@@ -528,7 +577,7 @@ const wrongStatus = await intakePost(
   intakeBody(`verify-wrong-${intakeStamp}`),
 );
 check(
-  "34. webhook rejects a wrong secret of the same length, and writes nothing",
+  "36. webhook rejects a wrong secret of the same length, and writes nothing",
   wrongStatus === 401 && (await intakeRows()).length === 0,
   `status ${wrongStatus}`,
 );
@@ -538,7 +587,7 @@ const oversizedStatus = await intakePost(
   intakeBody(`verify-big-${intakeStamp}`, { padding: "x".repeat(1_000_000) }),
 );
 check(
-  "35. webhook rejects an oversized body, and writes nothing",
+  "37. webhook rejects an oversized body, and writes nothing",
   oversizedStatus === 413 && (await intakeRows()).length === 0,
   `status ${oversizedStatus}`,
 );
@@ -547,7 +596,7 @@ const goodResponseId = `verify-ok-${intakeStamp}`;
 const okStatus = await intakePost({ "x-webhook-secret": SECRET }, intakeBody(goodResponseId));
 const afterFirst = await intakeRows();
 check(
-  "36. a valid submission creates exactly one consultation",
+  "38. a valid submission creates exactly one consultation",
   okStatus === 201 && afterFirst.length === 1,
   `status ${okStatus}, ${afterFirst.length} row(s)`,
 );
@@ -557,7 +606,7 @@ check(
 const replayStatus = await intakePost({ "x-webhook-secret": SECRET }, intakeBody(goodResponseId));
 const afterReplay = await intakeRows();
 check(
-  "37. replaying the same form response creates no second row",
+  "39. replaying the same form response creates no second row",
   replayStatus === 200 && afterReplay.length === 1,
   `status ${replayStatus}, ${afterReplay.length} row(s)`,
 );
@@ -573,7 +622,7 @@ await admin.from("consultation_notes").insert({
 
 const { data: leakedNotes } = await asClient.from("consultation_notes").select("*");
 check(
-  "38. a coaching client CANNOT read the coach's private consultation notes",
+  "40. a coaching client CANNOT read the coach's private consultation notes",
   (leakedNotes ?? []).length === 0,
   `sees ${(leakedNotes ?? []).length} note(s)`,
 );
@@ -584,7 +633,7 @@ const signedOut = createClient(URL_, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const { data: anonConsults } = await signedOut.from("consultation_clients").select("id");
 const { data: clientConsults } = await asClient.from("consultation_clients").select("id");
 check(
-  "39. consultation records are readable by nobody but the coach",
+  "41. consultation records are readable by nobody but the coach",
   (anonConsults ?? []).length === 0 && (clientConsults ?? []).length === 0,
   `anon sees ${(anonConsults ?? []).length}, client sees ${(clientConsults ?? []).length}`,
 );
@@ -619,17 +668,17 @@ const { data: consultRowAfter } = await admin
   .maybeSingle();
 
 check(
-  "40. a coaching client CANNOT insert a consultation record",
+  "42. a coaching client CANNOT insert a consultation record",
   clientWrites.insert !== "ALLOWED",
   JSON.stringify(clientWrites),
 );
 check(
-  "41. an anonymous session CANNOT insert a consultation record",
+  "43. an anonymous session CANNOT insert a consultation record",
   anonWrites.insert !== "ALLOWED",
   JSON.stringify(anonWrites),
 );
 check(
-  "42. neither can rename or delete one — the row is untouched",
+  "44. neither can rename or delete one — the row is untouched",
   consultRowAfter !== null && consultRowAfter.name === `Verify — consultation ${planStamp}`,
   consultRowAfter ? `name is now "${consultRowAfter.name}"` : "the row was deleted",
 );
@@ -639,7 +688,7 @@ const { error: noteWriteErr } = await asClient
   .from("consultation_notes")
   .insert({ consultation_client_id: consultRecord.id, body: "forged" });
 check(
-  "43. a coaching client CANNOT write a consultation note",
+  "45. a coaching client CANNOT write a consultation note",
   noteWriteErr !== null,
   noteWriteErr ? `got ${noteWriteErr.code}` : "the note was written",
 );
@@ -653,7 +702,7 @@ const { error: colErr } = await admin
   .update({ auth_user_id: created.user.id })
   .eq("id", consultRecord.id);
 check(
-  "44. consultation_clients.auth_user_id no longer exists",
+  "46. consultation_clients.auth_user_id no longer exists",
   colErr !== null && /auth_user_id/.test(`${colErr.message ?? ""}`),
   colErr ? colErr.message : "the column accepted a write",
 );
@@ -662,7 +711,7 @@ check(
 // exactly the lookup this phase removed.
 const { error: fnErr } = await admin.rpc("current_consultation_client_id");
 check(
-  "45. current_consultation_client_id() no longer exists",
+  "47. current_consultation_client_id() no longer exists",
   fnErr !== null,
   fnErr ? `${fnErr.code ?? ""} ${fnErr.message ?? ""}`.trim() : "the function still resolves",
 );
@@ -682,7 +731,7 @@ const progressTheirs = `${theirs.id}/verify-${stamp}.jpg`;
 const { data: buckets } = await admin.storage.listBuckets();
 const progressBucket = (buckets ?? []).find((b) => b.name === PROGRESS_BUCKET);
 check(
-  "46. the progress-photos bucket exists and is private",
+  "48. the progress-photos bucket exists and is private",
   !!progressBucket && progressBucket.public === false,
   progressBucket ? `public: ${progressBucket.public}` : "bucket not found — run the phase 7 migration",
 );
@@ -691,7 +740,7 @@ const { error: progressOwnWrite } = await asClient.storage
   .from(PROGRESS_BUCKET)
   .upload(progressOwn, jpeg(), { contentType: "image/jpeg" });
 check(
-  "47. client CANNOT upload a progress photo, even into their own folder",
+  "49. client CANNOT upload a progress photo, even into their own folder",
   !!progressOwnWrite,
   progressOwnWrite ? "" : "upload succeeded",
 );
@@ -707,7 +756,7 @@ const { error: progressOwnRead } = await asClient.storage
   .from(PROGRESS_BUCKET)
   .download(progressOwn);
 check(
-  "48. client CAN read their own progress photo",
+  "50. client CAN read their own progress photo",
   !progressOwnRead,
   progressOwnRead?.message,
 );
@@ -716,7 +765,7 @@ const { error: progressCrossRead } = await asClient.storage
   .from(PROGRESS_BUCKET)
   .download(progressTheirs);
 check(
-  "49. client CANNOT read another client's progress photo",
+  "51. client CANNOT read another client's progress photo",
   !!progressCrossRead,
   progressCrossRead ? "" : "download succeeded",
 );
@@ -728,14 +777,14 @@ const { data: stillThere } = await admin.storage
   .from(PROGRESS_BUCKET)
   .download(progressOwn);
 check(
-  "50. client CANNOT delete their own progress photo",
+  "52. client CANNOT delete their own progress photo",
   !!stillThere,
   progressDelete ? "" : "remove reported success",
 );
 
 const progressRaw = await fetch(`${URL_}/storage/v1/object/public/${PROGRESS_BUCKET}/${progressOwn}`);
 check(
-  "51. progress photos are not readable without a signed URL",
+  "53. progress photos are not readable without a signed URL",
   progressRaw.status !== 200,
   `status ${progressRaw.status}`,
 );
@@ -751,7 +800,7 @@ const { data: measureAfter } = await admin
   .eq("client_id", mine.id)
   .eq("date", "2099-03-03");
 check(
-  "52. client CANNOT record their own measurements",
+  "54. client CANNOT record their own measurements",
   (measureAfter?.length ?? 0) === 0,
   measureWrite ? "" : "insert silently applied",
 );
@@ -778,7 +827,7 @@ const { data: newSession, error: newFails } = await probe.auth.signInWithPasswor
 await probe.auth.signOut();
 
 check(
-  "53. client can change their own password, and the old one stops working",
+  "55. client can change their own password, and the old one stops working",
   !!shortErr && !changeErr && !!oldStillWorks && !newFails && !!newSession.session,
   [
     shortErr ? "short rejected" : "SHORT ACCEPTED",
@@ -814,7 +863,7 @@ const { error: goodSession } = await admin
   .eq("client_id", mine.id)
   .eq("date", PROBE_OWN_DATE);
 check(
-  "54. database refuses a non-https check-in Lyfta link, even from the service role",
+  "56. database refuses a non-https check-in Lyfta link, even from the service role",
   acceptedSession.length === 0 && !goodSession,
   acceptedSession.length ? `accepted ${acceptedSession.join(", ")}` : goodSession?.message,
 );
@@ -841,7 +890,7 @@ const { data: after } = await admin
   .eq("id", mine.id)
   .single();
 check(
-  "55. cleanup restored the client row to how it was found",
+  "57. cleanup restored the client row to how it was found",
   after.auth_user_id === mineBefore.auth_user_id && after.email === mineBefore.email,
   `auth_user_id ${after.auth_user_id}, email ${after.email}`,
 );
