@@ -43,6 +43,14 @@ Ordered. Don't skip the verification at the end.
 
 1. [ ] New Supabase project. Record the project URL, `anon` key and `service_role` key.
 2. [ ] Run every file in `supabase/migrations/` **in filename order** in the SQL editor.
+
+       On a *fresh* database the Phase 10 migration's `delete from public.profiles where role =
+       'consultation_client'` matches nothing, which is the point — prod never had the role. On an
+       **existing** database (i.e. dev) it revokes those accounts: the proxy signs out any session
+       whose role has no home. The orphaned `auth.users` rows are left behind deliberately, because a
+       migration should not reach into the auth schema. Clear them by hand in **Authentication →
+       Users** — they can no longer reach anything, but an account that cannot be used should not sit
+       there looking like one that can.
 3. [ ] Create your coach auth user: **Authentication → Users → Add user**, with *Auto Confirm* on.
 4. [ ] Copy that user's UUID, then in the SQL editor:
        `insert into public.profiles (id, role, display_name) values ('<uuid>', 'coach', '<your name>');`
@@ -151,9 +159,13 @@ service-role key appears nowhere in the build output, and a client cannot escala
 Since Phase 4 it also proves the plan boundary, which has two halves: a client cannot read another
 client's plan or any of its meals, supplements or notes, **and** nobody but the coach can read a plan that
 has not been published — including the client who owns it. Reading a published plan does not imply
-writing one: a client cannot retitle their own plan or insert a meal group into it. A consultation client,
-provisioned for the duration of the run, sees exactly one plan and nothing else at all — no clients, no
-check-ins, no measurements, no photos — and can reach `/plan` but neither `/client` nor `/coach`.
+writing one: a client cannot retitle their own plan or insert a meal group into it.
+
+Since **Phase 10** the consultation side is proved by absence rather than by isolation. There is no
+consultation login, so the gate asserts the role is refused by the database, that a consultation-owned
+plan and the coach's private note are invisible to the only other role left, that consultation records
+are readable by nobody but the coach, and that `/plan`, `consultation_clients.auth_user_id` and
+`current_consultation_client_id()` are all gone (checks 27-28, 31, 38-41).
 
 Since Phase 3 the gate also proves the check-in write boundary: a client cannot insert, update, reassign
 or delete another client's check-in, one-per-day is enforced by the database rather than the UI, and the
@@ -196,13 +208,15 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
 - **`TIMEZONE` is hardcoded** to `Asia/Kolkata` in `src/lib/metrics.ts`. Correct today; wrong the moment
   you coach someone in another timezone, at which point it belongs on the client record.
 - **There is no "forgot password" flow.** A signed-in client can change their own password
-  (`PasswordCard` on `/client/account` and `/plan`), but someone locked *out* cannot recover on their
+  (`PasswordCard` on `/client/account`), but someone locked *out* cannot recover on their
   own — that needs `resetPasswordForEmail` plus **custom SMTP**, because Supabase's built-in sender is
   rate-limited to a handful of messages an hour and is explicitly not for production. Until then,
   recovery is manual: delete the auth user in Supabase and issue a new login.
-- **A consultation client's first password is delivered by hand.** No email is sent: the coach reads
-  the generated password off the screen once and passes it on. There is no "resend" — recovery today
-  means deleting the auth user in Supabase and issuing a new login.
+- ~~**A consultation client's first password is delivered by hand.**~~ — **closed in Phase 10 by
+  removing the login.** Consultation clients have no account: the coach downloads their plan as a PDF
+  from the plan preview and sends it on. There is no password to deliver, lose or recover. Note the
+  consequence — a revised plan reaches them only when the coach sends a new copy, which the Send plan
+  card says on the screen. DESIGN.md D-14.
 - **No audit trail.** Nothing records who changed a client's plan or weight, or when. Phase 4 made this
   slightly more visible: `plans.updated_at` moves on every save, but it records *when*, not *who* or
   *what changed*, and a published plan is edited in place under the client with no version history.
@@ -229,13 +243,11 @@ migrations — the `create table` discovery cannot see them, so §10 of the audi
   the fact, every field is length-capped and coerced, replays are absorbed by a unique index, and
   responses carry no body. Rate limiting is in-memory and therefore per-instance — see §5. Covered by
   gate checks 33-37.
-- ~~**Phase 6 — consultation client logins** must use the same `requireCoach()` assertion as
-  `createClientLogin`~~ — **done.** `createConsultationLogin` asserts `requireCoach()` before touching
-  the service role and rolls back each provisioning step on failure. The password is generated with
-  rejection-sampled `randomBytes` (~117 bits) and returned to the component rather than redirected
-  with, so it never enters a URL, history or a log. A unique index now stops two consultation records
-  sharing one auth user, which would have made `current_consultation_client_id()` serve the wrong
-  person's plan without erroring. Checks 41 and 42 cover the draft boundary and that index.
+- ~~**Phase 6 — consultation client logins**~~ — **removed entirely in Phase 10.**
+  `createConsultationLogin` is gone, along with the role, the `/plan` route, the unique index on
+  `auth_user_id` and the column itself. The `requireCoach()` rule it was written for still stands for
+  `createClientLogin`, which is now the only provisioning path in the app. `markPlanSent` replaced it
+  and touches no service role at all — it writes through the coach's own session.
 - **Any new API route** starts with zero authentication. Add an explicit role check as its first line.
 - **Any new Server Action touching `createAdminClient()`** must call `requireCoach()` first. This is the
   easiest serious mistake to make in this codebase.

@@ -21,7 +21,9 @@ Read all three before starting. The build plan is the source of truth for build 
 ## Three user roles
 - **coach** — full access to all client data, builds plans, reviews consultations.
 - **coaching_client** — submits daily check-ins, views ONLY their own history/plan/cut.
-- **consultation_client** — views ONLY the single plan assigned to them. Nothing else.
+- ~~**consultation_client**~~ — **removed in Phase 10.** Consultation clients have no account: the coach
+  builds their plan, downloads it as a PDF from the plan preview and sends it to them. Their records,
+  notes and plans are still in the app and still coach-only. `plans.owner_type` keeps the value.
 
 ## Core rules
 - Build in the phase order in the build plan. **One phase at a time** — finish, let me test, then move on. Do not jump ahead.

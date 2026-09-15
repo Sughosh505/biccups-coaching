@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 const ROLE_HOME: Record<string, string> = {
   coach: "/coach",
   coaching_client: "/client",
-  consultation_client: "/plan",
 };
 
 export async function login(formData: FormData) {

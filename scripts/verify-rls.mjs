@@ -368,25 +368,20 @@ check(
   `title "${titleAfter.title}", ${injected?.length ?? 0} injected row(s)`,
 );
 
-// --- the consultation client: one plan, and nothing else ---------------------
-const consultEmail = `verify-consult-${planStamp}@example.com`;
-const { data: consultUser } = await admin.auth.admin.createUser({
-  email: consultEmail,
-  password: PASSWORD,
-  email_confirm: true,
-});
-await admin
-  .from("profiles")
-  .insert({ id: consultUser.user.id, role: "consultation_client", display_name: "Verify Consult" });
+// --- consultation records after the login was removed ------------------------
+// Phase 10 removed the consultation client's account: there is no consultation_client
+// role and no /plan route. The coach downloads the plan as a PDF and sends it on. So
+// what needs proving is no longer "they see exactly one plan" but that the record,
+// its plan and its note are reachable by NOBODY except the coach.
 const { data: consultRecord } = await admin
   .from("consultation_clients")
   .insert({
     name: `Verify — consultation ${planStamp}`,
-    email: consultEmail,
-    auth_user_id: consultUser.user.id,
+    email: `verify-consult-${planStamp}@example.com`,
   })
   .select("id")
   .single();
+
 const consultPlanId = await seedPlan({
   ownerType: "consultation_client",
   ownerId: consultRecord.id,
@@ -394,30 +389,36 @@ const consultPlanId = await seedPlan({
   published: true,
 });
 
-const asConsult = createClient(URL_, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-const { data: consultSession } = await asConsult.auth.signInWithPassword({
-  email: consultEmail,
+// The role is gone from the profiles CHECK constraint. Uses a fresh auth user with
+// no profile of its own, so a failure here is the check constraint rejecting the
+// role and not a duplicate-key or foreign-key error standing in for it.
+const { data: roleProbeUser } = await admin.auth.admin.createUser({
+  email: `verify-role-${planStamp}@example.com`,
   password: PASSWORD,
+  email_confirm: true,
 });
-
-const { data: consultPlans } = await asConsult.from("plans").select("id");
+const { error: roleErr } = await admin
+  .from("profiles")
+  .insert({ id: roleProbeUser.user.id, role: "consultation_client", display_name: "Verify Role" });
 check(
-  "27. consultation client reads ONLY their own plan",
-  (consultPlans ?? []).length === 1 && consultPlans[0].id === consultPlanId,
-  `sees ${(consultPlans ?? []).length} plan(s)`,
+  "27. the consultation_client role is refused by the database",
+  roleErr?.code === "23514",
+  roleErr ? `got ${roleErr.code}: ${roleErr.message}` : "a consultation_client profile was created",
 );
 
-const consultLeakage = {};
-for (const table of ["clients", "daily_checkins", "measurements", "progress_photos", "form_checks"]) {
-  const { data } = await asConsult.from(table).select("*").limit(5);
-  consultLeakage[table] = data?.length ?? 0;
-}
-const consultCross = await planChildCounts(asConsult, theirPlanId);
+// A published consultation plan used to be readable by the person it was built for.
+// Now nobody but the coach can read it, and a coaching client is the only other role
+// left to try it with.
+const { data: clientSeesConsultPlan } = await asClient
+  .from("plans")
+  .select("id")
+  .eq("id", consultPlanId);
+const consultPlanChildren = await planChildCounts(asClient, consultPlanId);
 check(
-  "28. consultation client CANNOT read any coaching data",
-  Object.values(consultLeakage).every((n) => n === 0) &&
-    Object.values(consultCross).every((n) => n === 0),
-  JSON.stringify({ ...consultLeakage, crossPlan: consultCross }),
+  "28. a consultation-owned plan is invisible to a coaching client",
+  (clientSeesConsultPlan ?? []).length === 0 &&
+    Object.values(consultPlanChildren).every((n) => n === 0),
+  `sees ${(clientSeesConsultPlan ?? []).length} plan(s), ${JSON.stringify(consultPlanChildren)}`,
 );
 
 // --- routing, as that client -------------------------------------------------
@@ -443,22 +444,14 @@ check(
   clientStatuses.join(", "),
 );
 
-// The consultation client's whole app is /plan; everything else must bounce.
-const consultCookie = cookieFor(consultSession.session);
-const consultRoutes = {};
-for (const route of ["/plan", "/client", "/coach"]) {
-  const res = await fetch(`${BASE}${route}`, {
-    headers: { cookie: consultCookie },
-    redirect: "manual",
-  });
-  consultRoutes[route] = `${res.status} ${res.headers.get("location") ?? ""}`.trim();
-}
+// /plan was the consultation client's entire app. Phase 10 deleted the route, and
+// the proxy fails closed, so it must not serve anything to anyone who asks.
+const goneRoute = await fetch(`${BASE}/plan`, { headers: { cookie }, redirect: "manual" });
+const goneAnon = await fetch(`${BASE}/plan`, { redirect: "manual" });
 check(
-  "31. consultation client reaches /plan and is bounced everywhere else",
-  consultRoutes["/plan"] === "200" &&
-    consultRoutes["/client"].startsWith("307") &&
-    consultRoutes["/coach"].startsWith("307"),
-  JSON.stringify(consultRoutes),
+  "31. /plan no longer serves a plan to anyone",
+  goneRoute.status !== 200 && goneAnon.status !== 200,
+  `client ${goneRoute.status}, anonymous ${goneAnon.status}`,
 );
 
 
@@ -570,70 +563,53 @@ check(
 );
 
 // --- the private note boundary ------------------------------------------------
-// The note is in its own table precisely because consultation_clients_select_own
-// would have exposed it on the parent row. Prove the separation actually holds.
+// consultation_notes has no client-side policy at all. It was split off the parent
+// row in Phase 5 so a consultation login could never read it. The login is gone, but
+// the table still has to be coach-only.
 await admin.from("consultation_notes").insert({
   consultation_client_id: consultRecord.id,
   body: "Verify — coach eyes only",
 });
 
-const { data: leakedNotes } = await asConsult.from("consultation_notes").select("*");
+const { data: leakedNotes } = await asClient.from("consultation_notes").select("*");
 check(
-  "38. consultation client CANNOT read the coach's private note about them",
+  "38. a coaching client CANNOT read the coach's private consultation notes",
   (leakedNotes ?? []).length === 0,
   `sees ${(leakedNotes ?? []).length} note(s)`,
 );
 
-// consultation_clients_select_own is `auth_user_id = auth.uid()`. Nothing proved
-// the negative half of that until now.
-const { data: visibleConsults } = await asConsult.from("consultation_clients").select("id");
+// consultation_clients_select_own was dropped with the login, so the table now
+// carries the coach policy alone. Signed out is the weakest possible session.
+const signedOut = createClient(URL_, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const { data: anonConsults } = await signedOut.from("consultation_clients").select("id");
+const { data: clientConsults } = await asClient.from("consultation_clients").select("id");
 check(
-  "39. consultation client CANNOT read another consultation client's row",
-  (visibleConsults ?? []).length === 1 && visibleConsults[0].id === consultRecord.id,
-  `sees ${(visibleConsults ?? []).length} row(s)`,
+  "39. consultation records are readable by nobody but the coach",
+  (anonConsults ?? []).length === 0 && (clientConsults ?? []).length === 0,
+  `anon sees ${(anonConsults ?? []).length}, client sees ${(clientConsults ?? []).length}`,
 );
 
-// --- the consultation client's draft boundary --------------------------------
-// Test 27 proves they see their PUBLISHED plan. Nothing proved the other half:
-// that a plan the coach is still building stays invisible to the person it is
-// being built for. Test 22 covers that for coaching clients only.
-const consultDraftId = await seedPlan({
-  ownerType: "consultation_client",
-  ownerId: consultRecord.id,
-  title: `Verify — consult draft ${planStamp}`,
-  published: false,
-});
-
-const { data: consultVisiblePlans } = await asConsult.from("plans").select("id");
-const consultDraftChildren = await planChildCounts(asConsult, consultDraftId);
+// --- the column and the function that made a login possible ------------------
+// Both were dropped in Phase 10. If either came back, a consultation login could be
+// reinstated without anyone noticing the boundary had moved, and checks 27-28 would
+// still pass while the role sat unused.
+const { error: colErr } = await admin
+  .from("consultation_clients")
+  .update({ auth_user_id: created.user.id })
+  .eq("id", consultRecord.id);
 check(
-  "40. consultation client CANNOT read their own plan while it is a draft",
-  (consultVisiblePlans ?? []).every((p) => p.id !== consultDraftId) &&
-    Object.values(consultDraftChildren).every((n) => n === 0),
-  `sees ${(consultVisiblePlans ?? []).length} plan(s), ${JSON.stringify(consultDraftChildren)}`,
+  "40. consultation_clients.auth_user_id no longer exists",
+  colErr !== null && /auth_user_id/.test(`${colErr.message ?? ""}`),
+  colErr ? colErr.message : "the column accepted a write",
 );
 
-// current_consultation_client_id() returns a scalar. Two rows sharing one auth
-// user would make it pick one arbitrarily and serve the wrong person's plan,
-// silently — so the database has to refuse the second link.
-const { data: decoyConsult } = await admin
-  .from("consultation_clients")
-  .insert({ name: `Verify — decoy ${planStamp}` })
-  .select("id")
-  .single();
-const { error: dupLinkErr } = await admin
-  .from("consultation_clients")
-  .update({ auth_user_id: consultUser.user.id })
-  .eq("id", decoyConsult.id);
-const { data: decoyAfter } = await admin
-  .from("consultation_clients")
-  .select("auth_user_id")
-  .eq("id", decoyConsult.id)
-  .single();
+// A SECURITY DEFINER function resolving a session to a consultation record is
+// exactly the lookup this phase removed.
+const { error: fnErr } = await admin.rpc("current_consultation_client_id");
 check(
-  "41. two consultation records CANNOT share one auth user",
-  dupLinkErr?.code === "23505" && decoyAfter.auth_user_id === null,
-  dupLinkErr ? `got ${dupLinkErr.code}` : "second link silently applied",
+  "41. current_consultation_client_id() no longer exists",
+  fnErr !== null,
+  fnErr ? `${fnErr.code ?? ""} ${fnErr.message ?? ""}`.trim() : "the function still resolves",
 );
 
 // --- storage: the progress photo bucket (Phase 7) ----------------------------
@@ -798,9 +774,8 @@ await admin.from("plans").delete().in("id", created_plans);
 // The webhook probes write real rows through the real route. consultation_notes
 // cascades from consultation_clients, so the private note goes with the record.
 await admin.from("consultation_clients").delete().like("name", `Verify — intake ${intakeStamp}%`);
-await admin.from("consultation_clients").delete().in("id", [consultRecord.id, decoyConsult.id]);
-await admin.from("profiles").delete().eq("id", consultUser.user.id);
-await admin.auth.admin.deleteUser(consultUser.user.id);
+await admin.from("consultation_clients").delete().eq("id", consultRecord.id);
+await admin.auth.admin.deleteUser(roleProbeUser.user.id);
 await admin.from("clients").update(mineBefore).eq("id", mine.id);
 await admin.from("profiles").delete().eq("id", created.user.id);
 await admin.auth.admin.deleteUser(created.user.id);

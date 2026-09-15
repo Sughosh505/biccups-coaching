@@ -5,7 +5,7 @@ import { getConsultationDetail } from "@/lib/queries/consultation";
 import { parseFormResponses } from "@/lib/consultation";
 import { markConsulted, saveConsultationNote } from "@/app/coach/consultations/actions";
 import { ConsultationPipeline, type PipelineStep } from "@/components/coach/ConsultationPipeline";
-import { ConsultationLoginCard } from "@/components/coach/ConsultationLoginCard";
+import { SendPlanCard } from "@/components/coach/SendPlanCard";
 import {
   Avatar,
   Button,
@@ -34,6 +34,7 @@ const STATUS_TONE: Record<string, Tone> = {
 const NOTICES: Record<string, string> = {
   consulted: "Marked as consulted.",
   note: "Note saved.",
+  "plan-sent": "Marked as sent.",
 };
 
 function longDate(iso: string): string {
@@ -79,9 +80,9 @@ export default async function ConsultationReviewPage({
       done: plan !== null,
     },
     {
-      label: "View-only login sent",
-      date: consultation.login_sent_at ? longDate(consultation.login_sent_at) : null,
-      done: consultation.auth_user_id !== null,
+      label: "Plan sent",
+      date: consultation.plan_sent_at ? longDate(consultation.plan_sent_at) : null,
+      done: consultation.plan_sent_at !== null,
     },
   ];
 
@@ -200,12 +201,12 @@ export default async function ConsultationReviewPage({
               ))
             )}
 
-            <ConsultationLoginCard
+            <SendPlanCard
               consultationId={consultation.id}
               name={consultation.name}
-              email={consultation.email}
-              hasLogin={consultation.auth_user_id !== null}
-              hasPublishedPlan={plan?.published_at != null}
+              planId={plan?.id ?? null}
+              published={plan?.published_at != null}
+              sentAt={consultation.plan_sent_at}
             />
           </div>
 

@@ -7,7 +7,10 @@ A web app for a personal trainer/fitness coach to run his entire business in one
 The app serves **three user types** with different privileges:
 - **Coach** — full access to everything.
 - **Coaching clients** — submit daily check-ins and view their own history/plan/cut.
-- **Consultation clients** — view-only access to the single plan the coach built for them, nothing else.
+- ~~**Consultation clients** — view-only access to the single plan the coach built for them, nothing else.~~
+  **Superseded in Phase 10** (DESIGN.md D-14): they have no account. The coach sends them their plan as a
+  PDF instead. Everything below about the consultation *record*, the intake form and the coach's review
+  screen still holds — only the login is gone.
 
 ## 2. User Types & Access Matrix
 
@@ -31,7 +34,8 @@ Consultation and coaching clients are **separate accounts** with separate logins
 3. Webhook auto-creates a `consultation_clients` record; the coach views the responses **formatted cleanly** under the client's name.
 4. Coach runs the consultation call.
 5. Coach **builds a plan inside the app**.
-6. Consultation client gets a **view-only login** to see only that plan.
+6. ~~Consultation client gets a **view-only login** to see only that plan.~~ Coach downloads the plan as a
+   PDF from the preview screen and sends it to them, then marks it sent.
 
 ### Coaching flow (ongoing)
 1. Coaching client logs in and submits a **daily check-in** (native in-app form, replaces the daily Google Form).
@@ -95,7 +99,7 @@ Consultation and coaching clients are **separate accounts** with separate logins
 | 3 | Native daily check-in form + client history/cut view + trend charts |
 | 4 | Plan builder + clean client-facing plan view |
 | 5 | Consultation Google Form webhook + formatted consultation review |
-| 6 | Consultation client view-only login (plan only) |
+| 6 | ~~Consultation client view-only login (plan only)~~ — removed in Phase 10 |
 | 7 | Measurements + progress photos |
 | 8 | Simple reporting |
 
