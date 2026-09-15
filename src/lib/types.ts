@@ -28,6 +28,14 @@ export type Client = {
   status: string | null;
   start_date: string | null;
   notes: string | null;
+  /**
+   * Coach-facing shortcuts, never rendered on a client screen. The Lyfta programme
+   * belongs to the person rather than to a plan, so it outlives one being rebuilt
+   * — distinct from plan_notes.lyfta_link, which the client taps (D-7).
+   */
+  lyfta_link: string | null;
+  /** Usually an image in the coach's Drive, for macros the app does not hold. */
+  macros_link: string | null;
   created_at: string;
 };
 

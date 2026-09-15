@@ -36,7 +36,27 @@ function clientFields(form: FormData) {
     status: text(form, "status") ?? "active",
     start_date: text(form, "start_date"),
     notes: text(form, "notes"),
+    lyfta_link: text(form, "lyfta_link"),
+    macros_link: text(form, "macros_link"),
   };
+}
+
+/**
+ * Refused rather than silently dropped, the same way savePlan handles a bad Lyfta
+ * link: a coach who pastes a broken address and sees the client save cleanly will
+ * assume it works until the day they click it.
+ */
+function badLink(fields: ReturnType<typeof clientFields>): string | null {
+  for (const [key, label] of [
+    ["lyfta_link", "Lyfta programme"],
+    ["macros_link", "Macros"],
+  ] as const) {
+    const value = fields[key];
+    if (value && !/^https:\/\/\S+$/.test(value)) {
+      return `The ${label} link must be a full https:// address. Nothing was saved.`;
+    }
+  }
+  return null;
 }
 
 export async function addClient(form: FormData) {
@@ -47,6 +67,9 @@ export async function addClient(form: FormData) {
   if (!fields.name) {
     redirect(`/coach/clients/new?error=${encodeURIComponent("A name is required.")}`);
   }
+
+  const linkError = badLink(fields);
+  if (linkError) redirect(`/coach/clients/new?error=${encodeURIComponent(linkError)}`);
 
   const { data, error } = await supabase.from("clients").insert(fields).select("id").single();
 
@@ -62,7 +85,13 @@ export async function saveClient(clientId: string, form: FormData) {
   await requireCoach();
   const supabase = await createClient();
 
-  const { error } = await supabase.from("clients").update(clientFields(form)).eq("id", clientId);
+  const fields = clientFields(form);
+  const linkError = badLink(fields);
+  if (linkError) {
+    redirect(`/coach/clients/${clientId}/edit?error=${encodeURIComponent(linkError)}`);
+  }
+
+  const { error } = await supabase.from("clients").update(fields).eq("id", clientId);
 
   if (error) {
     redirect(

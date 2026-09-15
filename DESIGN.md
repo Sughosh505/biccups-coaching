@@ -544,6 +544,23 @@ desktop and scrolls horizontally on phone. The coach's tiles carry a delete cont
 the client's are read-only — clients never add, replace or delete a progress photo, and that is
 enforced by the storage policy, not the absence of a button.
 
+### Client shortcut links (coach) — added in Phase 12
+
+A row of **Secondary** buttons directly under the client header on `/coach/clients/[id]`, gap 10px,
+shown only when the client has the link. Each carries a 15px icon at 1.8 stroke in `--color-muted-2`:
+
+| Button | Icon | Opens |
+|---|---|---|
+| **Lyfta programme** | `DumbbellIcon` | `clients.lyfta_link` |
+| **Macros** | `ImageIcon` | `clients.macros_link` |
+
+Both `target="_blank"` with `rel="noopener noreferrer"`, and https-only — the server action refuses
+anything else with a sentence rather than saving a link that silently never opens.
+
+**Coach-only, and not shown on any client screen.** `macros_link` points into the coach's own Drive,
+which would give the client a permission page, and the client already has the real macros on their
+plan. Edited from the §4 Form's Coaching card. See D-17.
+
 ### Drive photo tile (coach) — added in Phase 12
 
 A progress photo that predates the app and still lives in the coach's Drive. Same 150×110 tile as an
@@ -875,6 +892,7 @@ appear there and who puts it there, per §4 EmptyState.
 | D-11 | **Progress photos are coach-uploaded and client-read-only**, enforced in the storage policy rather than by omitting a button. This is the one place the progress bucket differs from `daily-photos`, where the client uploads their own diet photo. |
 | D-12 | **Measurement sets are one per client per day**, upserted. A coach re-measuring the same day is correcting the entry; two rows sharing a date make "change since last time" ambiguous. Photos are the opposite (D-3) and carry no such constraint. |
 | D-10 | ~~The consultation login's first password is **generated, not typed**, and shown once.~~ **Superseded by D-14** — there is no consultation login. The rule still governs `createClientLogin` for coaching clients: the admin API bypasses Supabase's password policy entirely, so a typed password's only guard is a length check, and a generated one is strictly stronger. The coach passes it on directly; no email is sent, and the client changes it themselves from the Change password card on `/client/account`. |
+| D-17 | **The Lyfta programme and macros links live on the client, not the plan.** `plan_notes.lyfta_link` stays as it is — that one is handed over *with* a plan and the client taps it on their plan screen (D-7). These two belong to the person: they survive the coach deleting and rebuilding a plan, and they work before a plan exists at all, which is when the coach most needs them. `macros_link` is usually a picture in the coach's Drive, for macros the app does not hold — which is also why neither is rendered on a client screen. |
 | D-16 | **Progress photos from before the app stay in Google Drive.** The coach's sheets hold years of dated Drive links, and moving the files would be a migration that can lose them for no gain — the coach already browses them there. So `progress_photos` carries either an uploaded `photo_url` or a `drive_link`, never neither, and the coach's gallery renders a link tile for the second kind. **Clients do not see them**, because Drive would refuse them anyway; new in-app uploads behave exactly as D-11 describes. This is a one-way door only for history: nothing new should ever be filed as a Drive link. |
 | D-15 | **A consultation can be created and edited by hand.** The Google Form webhook stays the primary path; this is the fallback, because its failures are silent and a missed submission was previously unrecoverable without hand-writing `jsonb` in the dashboard. Hand entry shares the webhook's caps (`src/lib/consultation-input.ts`) but **refuses instead of truncating** — an anonymous endpoint that cannot report back should keep a shortened answer, a coach watching one save short would never notice. `form_response_id` stays null and is not settable: a real one would make a later genuine delivery collide, and the route turns a collision into a silent `200`. **Delete refuses while a plan still points at the record**, because `plans.owner_id` has no foreign key and would be orphaned. |
 | D-14 | **Consultation clients have no login.** D-13 made the plan a PDF the coach sends, which is what the account existed to deliver. The account cost a hand-delivered password, no email, no resend and no recovery — for a document read once. Removed in Phase 10: the `consultation_client` role, `/plan`, `current_consultation_client_id()` and `consultation_clients.auth_user_id` are all gone. **`plans.owner_type` keeps both values** — the coach still builds plans for consultation clients, they just do not log in to read one. |

@@ -113,6 +113,21 @@ export function ClientForm({
             type="date"
             defaultValue={client?.start_date}
           />
+          {/* Coach-facing shortcuts. Full https addresses — the database refuses
+              anything else, and the server action says so rather than saving a
+              link that would silently never open. */}
+          <Field
+            label="Lyfta programme"
+            name="lyfta_link"
+            defaultValue={client?.lyfta_link}
+            placeholder="https://lyfta.app/cp/…"
+          />
+          <Field
+            label="Macros"
+            name="macros_link"
+            defaultValue={client?.macros_link}
+            placeholder="https://drive.google.com/…"
+          />
           <div className="col-span-2">
             <TextareaField
               label="Notes"

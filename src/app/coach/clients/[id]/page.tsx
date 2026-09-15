@@ -12,7 +12,7 @@ import {
   StatTile,
 } from "@/components/ui";
 import { RangedWeightChart } from "@/components/ui/WeightChart";
-import { KeyIcon } from "@/components/icons";
+import { DumbbellIcon, ImageIcon, KeyIcon } from "@/components/icons";
 
 const MEASUREMENT_FIELDS = [
   ["Arms — right", "arms_right"],
@@ -130,6 +130,36 @@ export default async function ClientOverviewPage({
           </div>
         }
       />
+
+      {/* The two things the coach opens most, straight from the client's page and
+          before any plan exists. Coach-only: macros_link points into their own
+          Drive, and the client has the real macros on their plan. */}
+      {client.lyfta_link || client.macros_link ? (
+        <div className="flex items-center gap-2.5">
+          {client.lyfta_link ? (
+            <a
+              href={client.lyfta_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:border-border-strong"
+            >
+              <DumbbellIcon size={15} strokeWidth={1.8} className="text-muted-2" />
+              Lyfta programme
+            </a>
+          ) : null}
+          {client.macros_link ? (
+            <a
+              href={client.macros_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:border-border-strong"
+            >
+              <ImageIcon size={15} strokeWidth={1.8} className="text-muted-2" />
+              Macros
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-4">
         {/* Details */}
