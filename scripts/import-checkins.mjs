@@ -267,7 +267,12 @@ for (let r = headerAt + 1; r < rows.length; r++) {
   const line = r + 1;
   const date = parseDate(cell(row, IDX.date));
   if (!date) {
-    if (row.some((c) => c.trim() !== "")) problems.push(`line ${line}: unreadable date "${cell(row, IDX.date)}"`);
+    // Only a non-blank date cell is a problem. These sheets carry a second header
+    // row of units under the real one ("(Y/N)", "LOW=1 HIGH = 10"), which has no
+    // date and is not an error.
+    if (!isBlank(cell(row, IDX.date))) {
+      problems.push(`line ${line}: unreadable date "${cell(row, IDX.date)}"`);
+    }
     continue;
   }
 
